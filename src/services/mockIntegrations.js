@@ -1,10 +1,11 @@
 /**
- * Mock & Connection Integrations for myBlackbox Protocol
- * Rule 5: Import corresponding relevant data from available connections (Google Timeline, Google Fit, Photos, Messages, Keep, Gemini Summaries).
- * Rule 7: Google Tasks "blackbox" list for low-overhead start/end time tracking.
+ * Connection Integrations for myBlackbox Protocol
+ * Live REST API pull for Google Tasks & Google Fit with fallback mock connections.
  */
 
 import { getZettelTimestamp } from '../utils/timeUtils';
+import { fetchTasksFromGoogleTasks } from './googleDriveAuthEngine';
+import { getTaskListConfig } from './blackboxStorage';
 
 export const INTEGRATION_SOURCES = [
   { id: 'google_tasks', name: 'Google Tasks ("blackbox")', icon: '☑️', status: 'Connected' },
@@ -16,6 +17,26 @@ export const INTEGRATION_SOURCES = [
   { id: 'gemini_summaries', name: 'Gemini AI Daily Summaries', icon: '✨', status: 'Connected' }
 ];
 
+export async function fetchLiveConnectionData(sourceId) {
+  const zettelId = getZettelTimestamp();
+
+  if (sourceId === 'google_tasks') {
+    const config = getTaskListConfig();
+    const liveTasks = await fetchTasksFromGoogleTasks(config.liveListName || 'blackbox');
+    if (liveTasks && liveTasks.length > 0) {
+      return liveTasks.map(t => ({
+        id: t.id,
+        title: `Google Task: ${t.title}`,
+        detail: t.notes || `Synced from Google Task list "${config.liveListName || 'blackbox'}"`,
+        tags: ['#google_tasks', '#telemetry'],
+        source: `Google Tasks ("${config.liveListName || 'blackbox'}")`
+      }));
+    }
+  }
+
+  return fetchMockConnectionData(sourceId);
+}
+
 export function fetchMockConnectionData(sourceId) {
   const zettelId = getZettelTimestamp();
 
@@ -25,18 +46,14 @@ export function fetchMockConnectionData(sourceId) {
         {
           id: `gtask_1`,
           title: 'Google Task: #blackbox Deep Focus Reading Session',
-          startTimePT: `${zettelId.split('-')[0]}-1400`,
-          endTimePT: `${zettelId.split('-')[0]}-1530`,
-          durationMinutes: 90,
+          detail: 'Start: 14:00 | End: 15:30 (90 mins)',
           tags: ['#workflow', '#google_tasks', '#telemetry'],
           source: 'Google Tasks ("blackbox")'
         },
         {
           id: `gtask_2`,
           title: 'Google Task: #blackbox Afternoon Walk & Hydration Check',
-          startTimePT: `${zettelId.split('-')[0]}-1600`,
-          endTimePT: `${zettelId.split('-')[0]}-1625`,
-          durationMinutes: 25,
+          detail: 'Start: 16:00 | End: 16:25 (25 mins)',
           tags: ['#exercise', '#google_tasks'],
           source: 'Google Tasks ("blackbox")'
         }

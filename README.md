@@ -1,4 +1,11 @@
-# ✈️ myBlackbox Microlog Protocol
+# ✈️ myBlackbox Microlog Protocol 
+
+✨ *kawaii aesthetic edition!* ✨
+
+   /\_/\
+  ( o.o )
+   > ^ <
+    meow!
 
 A lightweight, zero-friction telemetry logging protocol, mood pattern corollary engine, and Zettelkasten daily driver dashboard. 
 

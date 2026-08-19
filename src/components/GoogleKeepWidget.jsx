@@ -7,20 +7,26 @@ export default function GoogleKeepWidget({
 }) {
   const [keepNotes, setKeepNotes] = useState([
     {
+      id: 'keep_archive_books',
+      title: 'archive//books',
+      content: `• The F*ck It Diet: Eating Should Be Easy (Caroline Dooner)
+• Intuitive Eating, 4th Edition (Evelyn Tribole & Elyse Resch)
+• The Body Keeps the Score (Bessel van der Kolk)
+• The Sexual Healing Journey: A Guide for Survivors of Sexual Abuse (Wendy Maltz)
+• Atomic Habits (James Clear)
+• The Law of Attraction (Esther & Jerry Hicks)
+• Dale Carnegie (mostly as a warning for what to look out for)`,
+      isPinned: true,
+      color: '#fef3c7',
+      createdPT: '20260804-1033'
+    },
+    {
       id: 'keep_1',
       title: 'Ideas for myBlackbox Zettel protocol',
       content: 'Store everything in flat-file markdown under /Drive/Apps/myBlackbox/ for maximum developer decoupling.',
-      isPinned: true,
-      color: '#fef3c7',
-      createdPT: '20260803-1845'
-    },
-    {
-      id: 'keep_2',
-      title: 'Book Recommendation: Project Hail Mary',
-      content: 'Read before next weekend focus block #reading',
       isPinned: false,
       color: '#dbeafe',
-      createdPT: '20260803-1730'
+      createdPT: '20260803-1845'
     }
   ]);
 
@@ -97,6 +103,18 @@ export default function GoogleKeepWidget({
         <span className="zettel-badge" style={{ color: '#fcd34d', borderColor: 'rgba(245, 158, 11, 0.3)' }}>
           {keepNotes.length} Notes
         </span>
+      </div>
+
+      {/* Explanation Banner */}
+      <div className="glass-card" style={{ padding: '0.75rem', marginBottom: '0.9rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#fcd34d', marginBottom: '0.3rem' }}>
+          💡 How "Save to Keep" Works:
+        </div>
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+          1. <strong>1-Click Clipboard Sync:</strong> Clicking <em>"Save to Keep"</em> copies the formatted note text to your clipboard and launches <code>keep.google.com</code>. Click <em>"+ Take a note..."</em> and press <code>Ctrl+V</code> to paste!
+          <br />
+          2. <strong>JSON Schema:</strong> The <code>.json</code> download is Google Keep's Takeout/API schema used by automated import scripts.
+        </p>
       </div>
 
       {/* Quick Add Form */}

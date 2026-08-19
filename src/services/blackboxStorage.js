@@ -14,8 +14,27 @@ const STORAGE_KEYS = {
   EBOOK_SESSIONS: 'blackbox_ebook_sessions_v1',
   BLACKBOX_TASKS: 'blackbox_tasks_v1',
   GOALS: 'blackbox_goals_v1',
-  TASK_LIST_CONFIG: 'blackbox_task_list_config_v1'
+  TASK_LIST_CONFIG: 'blackbox_task_list_config_v1',
+  AUTO_TAG_CONFIG: 'blackbox_auto_tag_config_v1'
 };
+
+export function getAutoTagConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.AUTO_TAG_CONFIG);
+    if (!raw) return { enabled: true, tag: '#myblackbox' };
+    return JSON.parse(raw);
+  } catch (e) {
+    return { enabled: true, tag: '#myblackbox' };
+  }
+}
+
+export function saveAutoTagConfig(config) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.AUTO_TAG_CONFIG, JSON.stringify(config));
+  } catch (e) {
+    console.error('Failed to save auto tag config', e);
+  }
+}
 
 // Default Configurable & Loadable Mood Sets (Daylio inspired)
 export const DEFAULT_MOOD_SETS = [
@@ -141,7 +160,10 @@ export const DEFAULT_SIP_SETTINGS = {
   unit: 'ml',
   dailySipTarget: 40,
   todaySipCount: 12,
-  todayPeeCount: 3
+  todayPeeCount: 3,
+  weatherModeId: 'moderate',
+  isColdSensitive: false,
+  isHeatSensitive: false
 };
 
 export function getLogs() {
@@ -192,7 +214,24 @@ export function nukeAllLogs() {
   return [];
 }
 
-export function bulkUpdateLogs(logIds, { addTag, appendText, prependText }) {
+export function toggleArchiveLog(logId) {
+  const currentLogs = getLogs();
+  const updated = currentLogs.map(l => {
+    if (l.id !== logId) return l;
+    const hasArchive = l.tags && l.tags.includes('#archive');
+    const newTags = hasArchive
+      ? (l.tags || []).filter(t => t !== '#archive')
+      : [...(l.tags || []), '#archive'];
+    return {
+      ...l,
+      tags: newTags
+    };
+  });
+  localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(updated));
+  return updated;
+}
+
+export function bulkUpdateLogs(logIds, { addTag, removeTag, toggleArchive, appendText, prependText }) {
   const currentLogs = getLogs();
   const idSet = new Set(logIds);
 
@@ -204,6 +243,17 @@ export function bulkUpdateLogs(logIds, { addTag, appendText, prependText }) {
       const cleanTag = addTag.trim().startsWith('#') ? addTag.trim() : `#${addTag.trim()}`;
       if (!updatedTags.includes(cleanTag)) {
         updatedTags.push(cleanTag);
+      }
+    }
+    if (removeTag && removeTag.trim()) {
+      const cleanTag = removeTag.trim().startsWith('#') ? removeTag.trim() : `#${removeTag.trim()}`;
+      updatedTags = updatedTags.filter(t => t !== cleanTag);
+    }
+    if (toggleArchive) {
+      if (updatedTags.includes('#archive')) {
+        updatedTags = updatedTags.filter(t => t !== '#archive');
+      } else {
+        updatedTags.push('#archive');
       }
     }
 
@@ -253,6 +303,13 @@ export function saveMoodSet(moodSet) {
   return updated;
 }
 
+export function deleteMoodSet(setId) {
+  const moodSets = getMoodSets();
+  const updated = moodSets.filter(m => m.id !== setId);
+  localStorage.setItem(STORAGE_KEYS.MOOD_SETS, JSON.stringify(updated));
+  return updated;
+}
+
 export function getActiveMoodSetId() {
   return localStorage.getItem(STORAGE_KEYS.ACTIVE_MOOD_SET_ID) || 'standard_5';
 }
@@ -280,14 +337,23 @@ export function saveSipSettings(settings) {
 
 export const DEFAULT_TASK_LIST_CONFIG = {
   liveListName: 'blackbox',
-  backlogListName: 'roundtoit'
+  backlogListName: 'roundtoit',
+  tbrListName: 'tbr',
+  goalsListName: 'blackbox_goals',
+  sipsListName: 'blackbox_sips',
+  peeListName: 'blackbox_pee',
+  pooListName: 'blackbox_poo',
+  medsListName: 'blackbox_meds',
+  fitnessListName: 'blackbox_fitness',
+  weatherListName: 'blackbox_weather',
+  braindumpListName: 'blackbox_braindump'
 };
 
 export function getTaskListConfig() {
   const data = localStorage.getItem(STORAGE_KEYS.TASK_LIST_CONFIG);
   if (!data) return DEFAULT_TASK_LIST_CONFIG;
   try {
-    return JSON.parse(data);
+    return { ...DEFAULT_TASK_LIST_CONFIG, ...JSON.parse(data) };
   } catch (e) {
     return DEFAULT_TASK_LIST_CONFIG;
   }

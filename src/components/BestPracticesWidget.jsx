@@ -1,68 +1,104 @@
 import React, { useState, useEffect } from 'react';
-import { HelpCircle, CheckCircle2, AlertCircle, Calendar, Clock, ArrowDownUp, Zap, Sparkles, AlertTriangle, Settings, Heart, Brain, Lightbulb, RefreshCw, Dices, Bookmark } from 'lucide-react';
-import { getZettelTimestamp, formatDuration } from '../utils/timeUtils';
-import { getTaskListConfig } from '../services/blackboxStorage';
+import { BookOpen, Heart, Brain, Lightbulb, Sparkles, CheckCircle2, Shield, RefreshCw, Key, ExternalLink, Zap, Flame, Wind, Play, Pause, RotateCcw, Compass, PenTool, MessageSquare, Users, Utensils } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+const TOUGH_LOVE_REFRAMES = [
+  {
+    harsh: "You're being lazy and falling behind!",
+    kind: "Your battery is low; taking a strategic rest break now empowers your next build cycle.",
+    tag: "#self_compassion"
+  },
+  {
+    harsh: "You should have finished this task hours ago!",
+    kind: "Pacing yourself prevents burnout; making today a non-zero day is more than enough.",
+    tag: "#pacing"
+  },
+  {
+    harsh: "Why can't you just focus and stop procrastinating?!",
+    kind: "Sensory overload is real; let's reduce environment friction and take 1 small micro-step.",
+    tag: "#low_friction"
+  },
+  {
+    harsh: "You completely wasted today!",
+    kind: "Every micro-entry counts. Logging 1 sip, task, or thought keeps your momentum alive.",
+    tag: "#non_zero_day"
+  }
+];
+
+const C4_CREATOR_CYCLES = [
+  { id: 'create', label: '🎨 Create', icon: PenTool, color: '#10b981', desc: 'Write Zettel cards, code apps, design interfaces, build ideas.' },
+  { id: 'consume', label: '📚 Consume', icon: BookOpen, color: '#60a5fa', desc: 'Read #tbr backlog books, watch shows, listen to music.' },
+  { id: 'chat', label: '💬 Chat', icon: MessageSquare, color: '#ec4899', desc: 'Live micro-tweet, vent in braindump, converse with Gemini AI.' },
+  { id: 'collaborate', label: '🤝 Collaborate', icon: Users, color: '#a78bfa', desc: 'Pair-program, export posts to Blogger/WordPress, share work.' },
+  { id: 'chow_down', label: '🍱 Chow Down', icon: Utensils, color: '#f59e0b', desc: 'Fuel the body with hydration, nutrients, sips, and bio-care.' },
+  { id: 'calm', label: '🧘 Calm', icon: Heart, color: '#34d399', desc: 'Reset, allow low-stimulation processing time, honor rest.' }
+];
+
 export default function BestPracticesWidget({
-  onStartBlackboxTask,
-  onOpenSettings
+  onOpenSettings,
+  onSaveZettel
 }) {
-  const [activeTab, setActiveTab] = useState('roundtoit'); // 'roundtoit' | 'best_practices' | 'mental_health'
-  const [listConfig, setListConfig] = useState({ liveListName: 'blackbox', backlogListName: 'roundtoit' });
-  const [suggestedIdea, setSuggestedIdea] = useState(null);
+  const [activeTab, setActiveTab] = useState('protocol'); // 'protocol' | 'c4_compassion' | 'mental_health' | 'integrations'
+  
+  // Interactive 1-Minute Grounding Breathing State
+  const [isBreathingActive, setIsBreathingActive] = useState(false);
+  const [breathPhase, setBreathPhase] = useState('Breathe In... 🫁');
+  const [breathSecondsLeft, setBreathSecondsLeft] = useState(60);
+
+  // Self Compassion & C4 State
+  const [activeReframeIdx, setActiveReframeIdx] = useState(0);
+  const [activeCycle, setActiveCycle] = useState(C4_CREATOR_CYCLES[0]);
 
   useEffect(() => {
-    setListConfig(getTaskListConfig());
-  }, []);
+    let ticker = null;
+    if (isBreathingActive && breathSecondsLeft > 0) {
+      ticker = setInterval(() => {
+        setBreathSecondsLeft(prev => {
+          const nextSec = prev - 1;
+          const cycleSec = (60 - nextSec) % 12;
+          if (cycleSec < 4) setBreathPhase('Inhale Slowly... 🌬️ (4s)');
+          else if (cycleSec < 8) setBreathPhase('Hold Breath... ⏸️ (4s)');
+          else setBreathPhase('Exhale Gently... 💨 (4s)');
 
-  const oldestFirstTasks = [
-    {
-      id: 'r_task_1',
-      title: 'Audit obsidian vault & update zettel index',
-      createdPT: '20260701-0900',
-      category: 'Zettel Maintenance',
-      ageDays: 33,
-      tags: ['#roundtoit', '#zettel']
-    },
-    {
-      id: 'r_task_2',
-      title: 'Review home water filter replacement specs',
-      createdPT: '20260710-1400',
-      category: 'Home Projects',
-      ageDays: 24,
-      tags: ['#roundtoit', '#home']
-    },
-    {
-      id: 'r_task_3',
-      title: 'Clean out digital downloads folder & archive .md backups',
-      createdPT: '20260718-1630',
-      category: 'Digital Housekeeping',
-      ageDays: 16,
-      tags: ['#roundtoit', '#maintenance']
-    },
-    {
-      id: 'r_task_4',
-      title: 'Read Chapter 5 of Andy Weir sci-fi book',
-      createdPT: '20260725-1100',
-      category: 'Reading & Curiosity',
-      ageDays: 9,
-      tags: ['#roundtoit', '#reading']
+          if (nextSec <= 0) {
+            clearInterval(ticker);
+            setIsBreathingActive(false);
+            confetti({ particleCount: 30, spread: 60, origin: { y: 0.7 } });
+            setBreathPhase('✨ Grounding Break Complete! Feel Restored.');
+            return 0;
+          }
+          return nextSec;
+        });
+      }, 1000);
     }
-  ];
+    return () => clearInterval(ticker);
+  }, [isBreathingActive, breathSecondsLeft]);
 
-  const handleSuggestBoredomIdea = () => {
-    const randomPick = oldestFirstTasks[Math.floor(Math.random() * oldestFirstTasks.length)];
-    setSuggestedIdea(randomPick);
-    confetti({ particleCount: 35, spread: 60, origin: { y: 0.75 } });
+  const handleStartBreathing = () => {
+    setBreathSecondsLeft(60);
+    setBreathPhase('Inhale Slowly... 🌬️ (4s)');
+    setIsBreathingActive(true);
+    confetti({ particleCount: 20, spread: 40, origin: { y: 0.8 } });
   };
 
-  const dueSoonTasks = oldestFirstTasks.filter(t => t.dueDatePT && t.dueDatePT.startsWith(getZettelTimestamp().substring(0, 8)));
-
-  const handleConvertRoundtoitToActive = (task) => {
-    onStartBlackboxTask(task.title);
-    confetti({ particleCount: 30, spread: 60, origin: { y: 0.8 } });
+  const handleNextReframe = () => {
+    setActiveReframeIdx((prev) => (prev + 1) % TOUGH_LOVE_REFRAMES.length);
+    confetti({ particleCount: 20, spread: 40, origin: { y: 0.8 } });
   };
+
+  const handleLogC4Phase = (cycle) => {
+    if (onSaveZettel) {
+      onSaveZettel({
+        title: `🔄 Creator Cycle Phase: ${cycle.label}`,
+        type: 'microlog',
+        content: `**Current Cycle Focus**: ${cycle.label}\n**Guidance**: ${cycle.desc}`,
+        tags: ['#c4_engine', `#${cycle.id}`, '#creator_cycle']
+      });
+    }
+    confetti({ particleCount: 25, spread: 50, origin: { y: 0.8 } });
+  };
+
+  const currentReframe = TOUGH_LOVE_REFRAMES[activeReframeIdx];
 
   return (
     <div className="glass-panel" style={{ padding: '1.2rem' }}>
@@ -77,14 +113,14 @@ export default function BestPracticesWidget({
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <HelpCircle size={20} />
+            <BookOpen size={20} />
           </div>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'white' }}>
-              Protocol Guide & Mental Health Best Practices
+              myBlackbox Protocol Guide & Mental Health Companion
             </h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Micrologging protocol, mental health impact & Google Tasks integration
+              Creation timestamp pairs, C4 Creator Cycle, Self-Compassion & Mental Health
             </p>
           </div>
         </div>
@@ -92,200 +128,259 @@ export default function BestPracticesWidget({
         {/* Tab Switcher */}
         <div style={{ display: 'flex', gap: '0.3rem', background: 'rgba(255,255,255,0.04)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
           <button
-            onClick={() => setActiveTab('roundtoit')}
+            onClick={() => setActiveTab('protocol')}
             style={{
-              background: activeTab === 'roundtoit' ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
-              color: activeTab === 'roundtoit' ? '#fff' : 'var(--text-muted)',
+              background: activeTab === 'protocol' ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
+              color: activeTab === 'protocol' ? '#fff' : 'var(--text-muted)',
               border: 'none',
               borderRadius: '6px',
-              padding: '0.3rem 0.6rem',
-              fontSize: '0.75rem',
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.73rem',
               fontWeight: '600',
               cursor: 'pointer'
             }}
           >
-            📋 Backlog ({oldestFirstTasks.length})
+            📖 Protocol
           </button>
+
           <button
-            onClick={() => setActiveTab('best_practices')}
+            onClick={() => setActiveTab('c4_compassion')}
             style={{
-              background: activeTab === 'best_practices' ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
-              color: activeTab === 'best_practices' ? '#fff' : 'var(--text-muted)',
+              background: activeTab === 'c4_compassion' ? 'rgba(236, 72, 153, 0.25)' : 'transparent',
+              color: activeTab === 'c4_compassion' ? '#fff' : 'var(--text-muted)',
               border: 'none',
               borderRadius: '6px',
-              padding: '0.3rem 0.6rem',
-              fontSize: '0.75rem',
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.73rem',
               fontWeight: '600',
               cursor: 'pointer'
             }}
           >
-            📖 Micrologging
+            ❤️ C4 & Compassion
           </button>
+
           <button
             onClick={() => setActiveTab('mental_health')}
             style={{
               background: activeTab === 'mental_health' ? 'rgba(16, 185, 129, 0.25)' : 'transparent',
-              color: activeTab === 'mental_health' ? '#34d399' : 'var(--text-muted)',
+              color: activeTab === 'mental_health' ? '#fff' : 'var(--text-muted)',
               border: 'none',
               borderRadius: '6px',
-              padding: '0.3rem 0.6rem',
-              fontSize: '0.75rem',
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.73rem',
               fontWeight: '600',
               cursor: 'pointer'
             }}
           >
             💚 Mental Health
           </button>
+
+          <button
+            onClick={() => setActiveTab('integrations')}
+            style={{
+              background: activeTab === 'integrations' ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
+              color: activeTab === 'integrations' ? '#fff' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.73rem',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            ⚙️ Integrations
+          </button>
         </div>
       </div>
 
-      {/* Remind to Be Kind Banner */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '0.6rem 0.8rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <Heart size={18} color="#34d399" style={{ flexShrink: 0 }} />
-        <div style={{ fontSize: '0.78rem', color: '#ecfdf5', lineHeight: '1.3' }}>
-          <strong>Remind to Be Kind</strong>: Telemetry logging is for gentle self-awareness, pattern discovery, and mental clarity — <em>never self-judgment!</em>
-        </div>
-      </div>
-
-      {/* Google Tasks Lists Detection Banner */}
-      <div className="glass-card" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: '1rem', padding: '0.6rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '0.78rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <CheckCircle2 size={14} color="#34d399" />
-            "{listConfig.liveListName}" List: <strong style={{ color: '#fff' }}>ACTIVE ✓</strong>
-          </div>
-          <div style={{ fontSize: '0.78rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <CheckCircle2 size={14} color="#34d399" />
-            "{listConfig.backlogListName}" List: <strong style={{ color: '#fff' }}>ACTIVE ✓</strong>
-          </div>
-        </div>
-
-        <button onClick={onOpenSettings} className="btn-secondary" style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }} title="Configure custom list names">
-          <Settings size={12} />
-          <span>Switch Lists</span>
-        </button>
-      </div>
-
-      {activeTab === 'roundtoit' ? (
-        <div>
-          {/* Idea Storage & Timeless Backlog Header */}
-          <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.8rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#c4b5fd', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Bookmark size={15} color="#a78bfa" />
-                💡 Idea Storage Vault ("{listConfig.backlogListName}")
-              </div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-                No Strict Due Dates Required!
-              </span>
+      {/* Tab 1: Protocol Cheat Sheet */}
+      {activeTab === 'protocol' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {/* Protocol 1: Creation Timestamp Pairs */}
+          <div className="glass-card" style={{ padding: '0.8rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#93c5fd', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>⏱️ 1. Zero-Timer Protocol: Creation Timestamp Pairs ($T_2 - T_1$)</span>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '0.6rem' }}>
-              Roundtoits are timeless ideas, curious backlog projects, and boredom cures — zero pressure, zero deadlines. Use when looking for inspiration!
+            <p style={{ fontSize: '0.76rem', color: '#e2e8f0', margin: 0, lineHeight: '1.45' }}>
+              Task pairs require <strong>zero ticking stopwatch timers</strong>! Simply log a <code>Start Task</code> event ($T_1$) and a <code>Complete Task</code> event ($T_2$). Duration is calculated automatically from creation timestamps:
+              {"$$\\Delta t = \\text{Date}(T_2) - \\text{Date}(T_1)$$" }
             </p>
-
-            <button
-              onClick={handleSuggestBoredomIdea}
-              className="btn-primary"
-              style={{ width: '100%', padding: '0.45rem', fontSize: '0.78rem', background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-            >
-              <Dices size={15} /> 🎲 I'm Bored! Suggest a "{listConfig.backlogListName}" Idea
-            </button>
           </div>
 
-          {/* Boredom Picked Idea Card */}
-          {suggestedIdea && (
-            <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid #10b981', marginBottom: '0.8rem', padding: '0.8rem' }}>
-              <div style={{ fontSize: '0.73rem', fontWeight: '700', color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
-                ✨ Boredom Picked Idea:
-              </div>
-              <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#fff', marginBottom: '0.3rem' }}>
-                {suggestedIdea.title}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: '#a78bfa', background: 'rgba(139, 92, 246, 0.2)', padding: '2px 8px', borderRadius: '10px' }}>
-                  {suggestedIdea.category} • {suggestedIdea.ageDays}d old
-                </span>
-                <button
-                  onClick={() => handleConvertRoundtoitToActive(suggestedIdea)}
-                  className="btn-primary"
-                  style={{ padding: '0.2rem 0.6rem', fontSize: '0.72rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
-                >
-                  <Zap size={12} /> Start Idea
-                </button>
-              </div>
+          {/* Protocol 2: Toilet Excretion Auto-Classifier */}
+          <div className="glass-card" style={{ padding: '0.8rem', background: 'rgba(180, 83, 9, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fef08a', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>💩 ➔ 🚽 2. Single-Tap Bio Break Telemetry (Pee 🚽 & Poop 💩)</span>
             </div>
-          )}
-
-          {/* Oldest-First Backlog Overview Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <ArrowDownUp size={12} /> Oldest-First Idea Vault:
-            </span>
+            <p style={{ fontSize: '0.76rem', color: '#e2e8f0', margin: 0, lineHeight: '1.45' }}>
+              Biological breaks are logged via <strong>1-tap confirmations</strong> without complex task pairing over-engineering! Tracks frequency, hydration, and excretion health seamlessly.
+            </p>
           </div>
 
-          {/* Oldest-First Tasks Feed */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '180px', overflowY: 'auto' }}>
-            {oldestFirstTasks.map(t => (
-              <div key={t.id} className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.7rem' }}>
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>{t.title}</span>
-                    <span style={{ fontSize: '0.65rem', background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5', padding: '1px 6px', borderRadius: '4px' }}>
-                      {t.ageDays}d old
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-                    Created: {t.createdPT} PT
-                  </div>
+          {/* Protocol 3: 5m Beat-The-Clock Pomodoro Sprint */}
+          <div className="glass-card" style={{ padding: '0.8rem', background: 'rgba(217, 119, 6, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fcd34d', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>🔥 3. #tbd 5-Minute "Beat The Clock" Dopamine Pomodoro Sprint</span>
+            </div>
+            <p style={{ fontSize: '0.76rem', color: '#e2e8f0', margin: 0, lineHeight: '1.45' }}>
+              Ideas in your <strong>💡 #tbd Backlog</strong> do NOT need pairing! Click <strong>🔥 5m Sprint</strong> to launch a 5-minute gamified countdown timer. Finish before time expires for a <strong>+50 Dopamine Victory Points</strong> boost!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Integrated C4 Creator & Self-Compassion Engine */}
+      {activeTab === 'c4_compassion' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          {/* SECTION 1: Tough Love Phrase Re-framer */}
+          <div className="glass-card" style={{ padding: '0.85rem', background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.3)', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#f472b6', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Sparkles size={16} color="#ec4899" />
+                <span>Kindness Reminder: Replace "Tough Love" Self-Talk</span>
+              </div>
+
+              <button
+                onClick={handleNextReframe}
+                className="btn-secondary"
+                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', borderColor: 'rgba(236, 72, 153, 0.4)', color: '#f472b6' }}
+              >
+                <RefreshCw size={12} /> Next Reframe
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.76rem', color: '#cbd5e1', marginBottom: '0.4rem' }}>
+              <span style={{ textDecoration: 'line-through', color: '#fca5a5', opacity: 0.8, display: 'block' }}>
+                ❌ Harsh Self-Talk: "{currentReframe.harsh}"
+              </span>
+              <strong style={{ color: '#34d399', display: 'block', marginTop: '0.2rem', fontSize: '0.82rem' }}>
+                🟢 Kind Alternative: "{currentReframe.kind}"
+              </strong>
+            </div>
+          </div>
+
+          {/* SECTION 2: The C4 Creator & Maker Cycle Engine */}
+          <div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#fff', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <Compass size={16} color="#60a5fa" />
+              <span>🔄 The C4 Creator & Maker Cycle Engine:</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.4rem' }}>
+              {C4_CREATOR_CYCLES.map(c => {
+                const Icon = c.icon;
+                const isSelected = activeCycle.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setActiveCycle(c);
+                      handleLogC4Phase(c);
+                    }}
+                    className="btn-secondary"
+                    style={{
+                      padding: '0.45rem 0.35rem',
+                      fontSize: '0.72rem',
+                      borderColor: isSelected ? c.color : 'var(--border-color)',
+                      background: isSelected ? `${c.color}25` : 'rgba(0,0,0,0.25)',
+                      color: isSelected ? c.color : 'var(--text-muted)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <Icon size={15} color={c.color} />
+                    <span style={{ fontWeight: '700' }}>{c.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected Cycle Description Card */}
+            <div style={{ fontSize: '0.74rem', color: '#e2e8f0', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: '6px', marginTop: '0.5rem', border: `1px solid ${activeCycle.color}44` }}>
+              <strong style={{ color: activeCycle.color }}>Active Phase: {activeCycle.label}</strong> — {activeCycle.desc}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Mental Health Companion & Grounding Break */}
+      {activeTab === 'mental_health' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="glass-card" style={{ padding: '0.85rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#a7f3d0', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Heart size={18} color="#10b981" />
+              <span>Remind to Be Kind: Gentle Self-Awareness Principle</span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#e2e8f0', margin: 0, lineHeight: '1.5' }}>
+              Telemetry logging and blackbox micrologging exist purely for <strong>gentle self-awareness, pattern discovery, and mental clarity</strong> — <em>never self-judgment or guilt!</em> Track your day as a compassionate observer.
+            </p>
+          </div>
+
+          {/* Interactive 1-Min Grounding Breathing Box */}
+          <div className="glass-card" style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 165, 233, 0.25) 100%)', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '10px', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#67e8f9', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+              <Wind size={18} color="#06b6d4" />
+              <span>🧘 1-Minute Grounding & Deep Breathing Break</span>
+            </div>
+
+            {isBreathingActive ? (
+              <div style={{ padding: '0.8rem 0' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginBottom: '0.4rem' }}>
+                  {breathPhase}
                 </div>
-
+                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#67e8f9', fontFamily: 'monospace' }}>
+                  00:{String(breathSecondsLeft).padStart(2, '0')}
+                </div>
+                <div style={{ marginTop: '0.6rem' }}>
+                  <button onClick={() => setIsBreathingActive(false)} className="btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', color: '#f87171' }}>
+                    Pause Break
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: '0.76rem', color: '#cffaff', marginBottom: '0.8rem' }}>
+                  Feeling overwhelmed or stuck? Take 60 seconds to regulate your vagus nerve with 4-second box breathing!
+                </p>
                 <button
-                  onClick={() => handleConvertRoundtoitToActive(t)}
-                  className="btn-secondary"
-                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.4)' }}
-                  title="Start task in Blackbox live tracker"
+                  onClick={handleStartBreathing}
+                  className="btn-primary"
+                  style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)', padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                 >
-                  <Zap size={12} color="#60a5fa" /> Start Task
+                  <Wind size={15} /> 🧘 Start 1-Min Grounding Break
                 </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
-      ) : activeTab === 'mental_health' ? (
-        /* Mental Health & Self-Care Guide */
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <div style={{ background: 'rgba(16, 185, 129, 0.06)', padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-            <div style={{ fontWeight: '700', color: '#34d399', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Brain size={14} /> 🧠 Impact on Mental Health & Focus
+      )}
+
+      {/* Tab 4: Integrations & Google Sync Cheat Sheet */}
+      {activeTab === 'integrations' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="glass-card" style={{ padding: '0.85rem', background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#e9d5ff', marginBottom: '0.4rem' }}>
+              ⚙️ Google Tasks REST API & OAuth 2.0 Integration
             </div>
-            Micrologging removes cognitive friction. By logging micro-events (+1 sip, #meds, mood tick) in 2 seconds, you offload working memory strain without interrupting your flow.
+            <p style={{ fontSize: '0.76rem', color: '#e2e8f0', margin: 0, lineHeight: '1.45' }}>
+              • <strong>OAuth Token</strong>: Requires a valid Google OAuth Access Token with <code>https://www.googleapis.com/auth/tasks</code> scope.
+              <br />
+              • <strong>1-Click Token Refresh</strong>: Click <strong>⚡ 1-Click Token</strong> on the task widget to generate a fresh token via Google OAuth Playground.
+            </p>
           </div>
 
-          <div style={{ background: 'rgba(59, 130, 246, 0.06)', padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-            <div style={{ fontWeight: '700', color: '#60a5fa', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Lightbulb size={14} /> 🗑️ The Power of the Brain Dump
+          <div className="glass-card" style={{ padding: '0.85rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#93c5fd', marginBottom: '0.4rem' }}>
+              📁 Google Drive Flat-File .md Backup & Google Keep Clipboard Sync
             </div>
-            Unprocessed thoughts create background anxiety ("open cognitive loops"). Instant micrologging acts as a mental release valve, safely archiving thoughts into flat-file Zettel cards.
-          </div>
-
-          <div style={{ background: 'rgba(245, 158, 11, 0.06)', padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-            <div style={{ fontWeight: '700', color: '#fcd34d', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Heart size={14} /> 💚 Gentle Pattern Discovery
-            </div>
-            The Airplane Blackbox Corollary Engine correlates past low states (`😭`, `😔`) with missing factors (`#sip`, `#meds`, `#chocolate`) to help you care for your body proactively.
-          </div>
-        </div>
-      ) : (
-        /* Protocol Best Practices Guide */
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <strong style={{ color: '#fff' }}>1. Zettelkasten Timestamping Protocol</strong>: Every microlog begins with Pacific Time serialization (`YYYYMMDD-HHMM`) for flat-file indexing.
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <strong style={{ color: '#fff' }}>2. Low-Friction Telemetry</strong>: Use 1-tap triggers (+1 Sip, #meds, #chocolate) to maintain continuous logging flow without breaking focus.
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <strong style={{ color: '#fff' }}>3. Decoupled Flat-File Architecture</strong>: Your data belongs to you — stored in standard Notion/Obsidian Markdown formats.
+            <p style={{ fontSize: '0.76rem', color: '#e2e8f0', margin: 0, lineHeight: '1.45' }}>
+              • <strong>Google Drive /Drive/Apps/myBlackbox/</strong>: All Zettel notes are auto-converted to flat markdown (<code>.md</code>) files.
+              <br />
+              • <strong>Google Keep Sync</strong>: Formats note text, copies to your clipboard (<code>Ctrl+V</code>), and launches <code>keep.google.com</code> in 1 click!
+            </p>
           </div>
         </div>
       )}

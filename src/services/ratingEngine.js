@@ -89,6 +89,10 @@ export function generateEbookReviewZettel(data) {
 
   const durationStr = formatDuration(data.sessionDurationSeconds || 0);
 
+  const tweetsSection = (data.appendedMicroTweets && data.appendedMicroTweets.length > 0)
+    ? `\n### 📱 Appended Live Reading Micro-Tweets & Quotes:\n${data.appendedMicroTweets.map(tw => `> **${tw.title}**\n${tw.content}`).join('\n\n')}\n`
+    : '';
+
   const markdownContent = `---
 zettel_id: "${zettelId}"
 type: "ebook_review"
@@ -97,7 +101,7 @@ author: "${data.author}"
 series: "${data.seriesName || 'N/A'}"
 is_webnovel: ${data.isWebnovel ? true : false}
 ai_rating: ${aiRating.rating}
-tags: ["#reading", "#ebook", "#review", "#zettel", "#telemetry"]
+tags: ["#reading", "#ebook", "#review", "#zettel", "#media_vault", "#telemetry"]
 ---
 
 # 📚 ${data.title} ${data.seriesName ? `(${data.seriesName})` : ''}
@@ -122,7 +126,7 @@ ${aiRating.rationales.map(r => `- ${r}`).join('\n')}
 2. **1 Thing You'd Change**: ${data.changeOneThing || 'None'}
 3. **Would You Read More Like This?**: ${data.wouldReadMore ? data.wouldReadMore.toUpperCase() : 'N/A'}
 4. **Additional Comments**: ${data.additionalComments || 'None'}
-
+${tweetsSection}
 ### 📖 Synopsis & Context
 ${data.synopsis || 'No synopsis provided.'}
 
@@ -137,7 +141,7 @@ ${data.synopsis || 'No synopsis provided.'}
     type: 'ebook_review',
     content: markdownContent,
     mood: data.moodAfter,
-    tags: ['#reading', '#ebook', '#review', '#zettel', '#telemetry'],
+    tags: ['#reading', '#ebook', '#review', '#zettel', '#media_vault', '#telemetry'],
     metadata: {
       bookTitle: data.title,
       author: data.author,

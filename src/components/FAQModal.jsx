@@ -90,147 +90,131 @@ export default function FAQModal({
                 4. Fuel Body & Mind
               </strong>
               <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
-                Fuel body with sips & mind with reading curiosity.
+                Keep hydration, sips, and nutrient levels fueled for sustainable energy.
               </span>
             </div>
           </div>
 
+          {/* 1-Click "Make Today a Non-Zero Day" Button */}
           <button
             onClick={handleMakeNonZeroDay}
             className="btn-primary"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+            style={{ width: '100%', padding: '0.55rem', fontSize: '0.82rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: '800' }}
           >
-            <Zap size={15} /> ⚡ Make Today a Non-Zero Day (+1 Micro-Entry)
+            <Flame size={16} fill="white" />
+            <span>🔥 Make Today a Non-Zero Day (Log 1 Micro-Action Now)</span>
           </button>
         </div>
 
-        {/* The Tenets of The Fuck It Diet & Mental Health Guidance */}
+        {/* Google Task List Names & Associated Widgets Reference Card */}
+        <div className="glass-card" style={{ padding: '0.85rem', marginBottom: '1rem', borderLeft: '4px solid #a78bfa' }}>
+          <h3 style={{ fontSize: '0.92rem', fontWeight: '800', color: '#c4b5fd', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <CheckCircle2 size={16} color="#a78bfa" />
+            📋 Google Task List Names & Associated Widgets:
+          </h3>
+          <ul style={{ fontSize: '0.78rem', color: '#e2e8f0', margin: 0, paddingLeft: '1.2rem', lineHeight: '1.55' }}>
+            <li>
+              <strong>#blackbox</strong>: Active Start/End Timers, Spotify Skip Telemetry & Short-Gap Track Cleanups. <em>(Associated Widgets: Task Blackbox Widget - Timer Tab & Spotify Skip Widget)</em>
+            </li>
+            <li>
+              <strong>#roundtoit</strong>: Backlog & Non-urgent Life Arc Goal Tasks. <em>(Associated Widgets: Best Practices & Life Arc Goals Engine)</em>
+            </li>
+            <li>
+              <strong>#tbr</strong>: To Be Read / To Be Watched Media Backlog. <em>(Associated Widgets: Task Blackbox Widget - #tbr Tab & Live Media Tweeting Widget)</em>
+            </li>
+          </ul>
+        </div>
+
+        {/* IFTTT Configuration Suggestions (Spotify >> Tasks, Webhooks, Google Sheets) */}
+        <div className="glass-card" style={{ padding: '0.85rem', marginBottom: '1rem', borderLeft: '4px solid #10b981' }}>
+          <h3 style={{ fontSize: '0.92rem', fontWeight: '800', color: '#34d399', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Zap size={16} color="#10b981" />
+            ⚡ Recommended IFTTT Automation Recipes:
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.76rem', color: '#e2e8f0' }}>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '6px' }}>
+              <strong style={{ color: '#10b981' }}>🎵 Recipe 1: Spotify Skip ➔ Google Tasks #blackbox</strong>
+              <div>If track skipped on Spotify &rarr; Add task to Google Tasks list <code>#blackbox</code> ("Remove {"{{TrackName}}"} from {"{{PlaylistName}}"}").</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '6px' }}>
+              <strong style={{ color: '#60a5fa' }}>📊 Recipe 2: IFTTT-to-Google Sheets ➔ myBlackbox Link</strong>
+              <div>If IFTTT applet appends rows to a Google Sheet &rarr; Paste your published Google Sheets CSV URL into the "Link Google Sheet / CSV" tab in Data Import Hub!</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '6px' }}>
+              <strong style={{ color: '#a78bfa' }}>📍 Recipe 3: Android Location / Messages ➔ Webhook</strong>
+              <div>If arrive at location &rarr; Send Webhook POST to myBlackbox URL for zero-friction location logging.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Localhost vs Cloud Hosting & Free Tunnels Guide */}
+        <div className="glass-card" style={{ padding: '0.85rem', marginBottom: '1rem', borderLeft: '4px solid #3b82f6' }}>
+          <h3 style={{ fontSize: '0.92rem', fontWeight: '800', color: '#60a5fa', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            🌐 Webhooks: Localhost vs Cloud Hosting (3 Free Setup Methods)
+          </h3>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45', marginBottom: '0.6rem' }}>
+            To receive IFTTT webhooks directly into myBlackbox, choose one of these 3 free options:
+          </p>
+          <ul style={{ fontSize: '0.76rem', color: '#e2e8f0', margin: 0, paddingLeft: '1.2rem', lineHeight: '1.5' }}>
+            <li>
+              <strong>Option A: Free Cloud Hosting (Vercel / Netlify / Render / Cloudflare Pages)</strong>: Deploy your app to Vercel/Netlify with 1 click for a public HTTPS URL (e.g., <code>https://myblackbox.vercel.app/api/ingest</code>).
+            </li>
+            <li>
+              <strong>Option B: 1-Command Free Local Tunnel (Cloudflare Tunnel / ngrok)</strong>: If running on localhost, run <code>npx cloudflared tunnel --url http://localhost:5173</code> to get a public HTTPS webhook URL instantly without buying a domain.
+            </li>
+            <li>
+              <strong>Option C: PWA Native Share Sheet (0 Webhook Servers Needed!)</strong>: Install myBlackbox to your phone home screen as a PWA. Use Android/iOS native <strong>Share Sheet</strong> to share text from Spotify/Twitter/Notes straight into myBlackbox!
+            </li>
+          </ul>
+        </div>
+
+        {/* Law of Attraction & Reticular Activating System (RAS) Path Priming */}
         <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.3)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
           <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#f472b6', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Heart size={18} color="#ec4899" />
-            🥑 The Tenets of "The Fuck It Diet" & Body Wisdom (Zero Calorie Counting!)
+            <Sparkles size={18} color="#ec4899" />
+            🧲 Law of Attraction & RAS Path Priming (Non-Judgmental Life Arcs)
           </div>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45', marginBottom: '0.8rem' }}>
-            Based on Caroline Dooner's <em>The Fuck It Diet</em>, focusing on caloric math causes cognitive fatigue, food obsession, and weight stigma. True physical & mental health comes from listening to your body:
+            By explicitly naming your desires and preferences aloud, you prime your brain's <strong>Reticular Activating System (RAS)</strong> to filter out ambient background noise and spot path opportunities towards those outcomes.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.6rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.6rem', marginBottom: '0.8rem' }}>
             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
               <strong style={{ color: '#f472b6', fontSize: '0.78rem', display: 'block', marginBottom: '0.2rem' }}>
-                1. Ditch Calorie Counters
+                1. Verbalize Desires & Magnets
               </strong>
               <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
-                Counting calories breeds anxiety and disconnects you from internal hunger cues.
+                Logging what you love acts like a magnet, tuning your focus to notice alignment in daily life.
               </span>
             </div>
 
             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <strong style={{ color: '#34d399', fontSize: '0.78rem', display: 'block', marginBottom: '0.2rem' }}>
-                2. Honor All Hunger & Fuel
+              <strong style={{ color: '#a78bfa', fontSize: '0.78rem', display: 'block', marginBottom: '0.2rem' }}>
+                2. Low-Friction Non-Judgment
               </strong>
               <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
-                Apples, brownies, and coffee are all valid fuel that prime your body for activity!
+                Observe feelings without shame or harsh inner critics. Pacing comes before perfection.
               </span>
             </div>
           </div>
         </div>
 
-        {/* DIY Beginner's Guide to Google Cloud & OAuth */}
-        <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
+        {/* Step-by-Step Google OAuth & API Key Setup */}
+        <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '10px', padding: '1rem' }}>
           <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#93c5fd', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <KeyRound size={18} color="#60a5fa" />
-            🛠️ DIY Beginner's Guide: Setting Up Google Drive & Tasks OAuth
+            🔑 Step-by-Step DIY Google Cloud Credentials Setup
           </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45', marginBottom: '0.8rem' }}>
-            Don't have prior experience with Google Cloud Console (GCloud) or OAuth? No problem! Follow these 4 easy steps to create your free personal developer keys:
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#fff', marginBottom: '0.2rem' }}>
-                Step 1: Open Google Cloud Console
-              </div>
-              <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                Visit the free Google Cloud developer portal and click <strong>Create Project</strong> (e.g. name it <em>myBlackbox-App</em>).
-              </p>
-              <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" style={{ fontSize: '0.73rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'underline' }}>
-                Open Google Cloud Console <ExternalLink size={11} />
-              </a>
-            </div>
-
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#fff', marginBottom: '0.2rem' }}>
-                Step 2: Enable Free APIs (Drive & Tasks)
-              </div>
-              <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                Click the links below and press the blue <strong>Enable</strong> button on both pages:
-              </p>
-              <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noreferrer" style={{ fontSize: '0.73rem', color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'underline' }}>
-                  Enable Google Drive API <ExternalLink size={11} />
-                </a>
-                <a href="https://console.cloud.google.com/apis/library/tasks.googleapis.com" target="_blank" rel="noreferrer" style={{ fontSize: '0.73rem', color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'underline' }}>
-                  Enable Google Tasks API <ExternalLink size={11} />
-                </a>
-              </div>
-            </div>
-
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#fff', marginBottom: '0.2rem' }}>
-                Step 3: Create OAuth Client ID Credentials
-              </div>
-              <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-                Go to Credentials ➔ <strong>Create Credentials</strong> ➔ <strong>OAuth Client ID</strong> ➔ Select <em>Web Application</em>. Add Authorized JavaScript Origin: <code style={{ color: '#fcd34d' }}>http://localhost:5173</code>.
-              </p>
-              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" style={{ fontSize: '0.73rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'underline' }}>
-                Open Credentials Page <ExternalLink size={11} />
-              </a>
-            </div>
-
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#fff', marginBottom: '0.2rem' }}>
-                Step 4: Paste Client ID in myBlackbox Settings
-              </div>
-              <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
-                Copy your generated Client ID (looks like <code style={{ color: '#34d399' }}>123456-abc.apps.googleusercontent.com</code>) and paste it into <strong>Settings (⚙️) ➔ 🔐 Google OAuth Keys</strong>!
-              </p>
-            </div>
-
-          </div>
+          <ol style={{ fontSize: '0.78rem', color: '#e2e8f0', paddingLeft: '1.2rem', lineHeight: '1.6', margin: 0 }}>
+            <li>Go to <strong>Google Cloud Console</strong> (<code>console.cloud.google.com</code>).</li>
+            <li>Create a new project named <strong>myBlackbox</strong>.</li>
+            <li>Enable <strong>Google Tasks API</strong> and <strong>Google Drive API</strong>.</li>
+            <li>Create OAuth 2.0 Client ID Credentials (Web Application).</li>
+            <li>Add <code>https://localhost:5173</code> to Authorized JavaScript Origins & Redirect URIs.</li>
+            <li>Copy your <strong>Client ID</strong> and <strong>API Key</strong> into Settings ⚙️ ➔ Google Cloud Auth.</li>
+          </ol>
         </div>
 
-        {/* FAQ Accordion Items */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          
-          <div className="glass-card">
-            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#60a5fa', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Brain size={15} /> What is the point of myBlackbox Microlog Protocol?
-            </h4>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-              Like an airplane blackbox recorder, myBlackbox continuously captures low-overhead operational telemetry (sips, meds, mood ticks, micro-tweets) so that if you experience an unexpected slump or energy crash, the Corollary Engine can troubleshoot root causes.
-            </p>
-          </div>
-
-          <div className="glass-card">
-            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#c4b5fd', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <BookOpen size={15} /> Why are "roundtoits" timeless without strict due dates?
-            </h4>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-              Roundtoits are your timeless Idea Storage Vault & Boredom Cure Engine. They remove the anxiety of artificial deadlines — allowing you to store creative ideas and pick them up when you are looking for inspiration!
-            </p>
-          </div>
-
-          <div className="glass-card">
-            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#34d399', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Shield size={15} /> Where is my data stored?
-            </h4>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-              Your data belongs 100% to you. It is serialized in Zettelkasten Pacific Time Markdown format (`YYYYMMDD-HHMM`) in local browser storage and can be backed up directly to your personal Google Drive under `/Drive/Apps/myBlackbox/`.
-            </p>
-          </div>
-
-        </div>
       </div>
     </div>
   );

@@ -15,21 +15,119 @@ export default function PhotoSceneParserModal({
 }) {
   if (!isOpen) return null;
 
-  const [activeTab, setActiveTab] = useState('photo_scene'); // 'photo_scene' | 'selfie_memories'
+  const [activeTab, setActiveTab] = useState('upload_image'); // 'upload_image' | 'photo_scene' | 'selfie_memories'
   const [selectedSelfie, setSelectedSelfie] = useState(SAMPLE_SELFIE_MEMORIES[2]);
   const [comparisonTarget, setComparisonTarget] = useState(SAMPLE_SELFIE_MEMORIES[0]);
   const [customCaption, setCustomCaption] = useState('');
+  const [isBioEventChecked, setIsBioEventChecked] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Uploaded local image file state
+  const [uploadedImagePreview, setUploadedImagePreview] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [uploadedFileSize, setUploadedFileSize] = useState('');
+  const [originalFileObject, setOriginalFileObject] = useState(null);
+  const [imageRotation, setImageRotation] = useState(0);
+
+  const processAndSetImage = (file, rotationAngle = 0) => {
+    if (!file) return;
+
+    setUploadedFileName(file.name);
+    setOriginalFileObject(file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200; // Auto-scale to max 1200px dimension
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        if (rotationAngle === 90 || rotationAngle === 270) {
+          canvas.width = height;
+          canvas.height = width;
+        } else {
+          canvas.width = width;
+          canvas.height = height;
+        }
+
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((rotationAngle * Math.PI) / 180);
+        ctx.drawImage(img, -width / 2, -height / 2, width, height);
+
+        const scaledDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const kbSize = (scaledDataUrl.length * 0.75 / 1024).toFixed(1) + ' KB';
+        setUploadedImagePreview(scaledDataUrl);
+        setUploadedFileSize(`${kbSize} (Auto-Scaled from ${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageRotation(0);
+    processAndSetImage(file, 0);
+  };
+
+  const handleRotateImage = () => {
+    if (!originalFileObject) return;
+    const newRotation = (imageRotation + 90) % 360;
+    setImageRotation(newRotation);
+    processAndSetImage(originalFileObject, newRotation);
+  };
+
+  const handleSaveUploadedImageZettel = () => {
+    if (!uploadedImagePreview) {
+      alert('Please select an image file first.');
+      return;
+    }
+
+    onSaveZettel({
+      title: `Photo Scene Import: ${uploadedFileName || 'Uploaded Image'}`,
+      type: 'microlog',
+      content: `### 📷 Imported Photo Scene Telemetry\n**File Name**: ${uploadedFileName}\n**Processed Size**: ${uploadedFileSize}\n**Orientation**: ${imageRotation}° rotated\n\n**Scene Notes & Atmosphere**: ${customCaption.trim() || 'Imported from local image file.'}${isBioEventChecked ? '\n\n*Bio Tie-in*: Linked to recent excretion/bio health event for gut correlation.' : ''}\n\n![Imported Image Preview](${uploadedImagePreview})`,
+      tags: ['#photo_scene', '#image_import', '#telemetry', '#media_vault', isBioEventChecked ? '#bio_event' : null].filter(Boolean),
+      metadata: { fileName: uploadedFileName, fileSize: uploadedFileSize }
+    });
+
+    confetti({ particleCount: 35, spread: 60, origin: { y: 0.75 } });
+    setUploadedImagePreview(null);
+    setUploadedFileName('');
+    setCustomCaption('');
+    setOriginalFileObject(null);
+    onClose();
+  };
 
   const handleSaveSelfieZettel = () => {
     setIsProcessing(true);
 
     setTimeout(() => {
+      const tags = ['#selfie', '#memories', '#time_lapse', '#telemetry'];
+      if (isBioEventChecked) {
+        tags.push('#bio_event', '#health_telemetry', '#gut_health');
+      }
+
       onSaveZettel({
-        title: `Selfie Telemetry: ${selectedSelfie.title}`,
+        title: `Selfie Telemetry: ${selectedSelfie.title}${isBioEventChecked ? ' (Tied to Bio Event 💩)' : ''}`,
         type: 'microlog',
-        content: `**Current Vibe**: ${selectedSelfie.vibe}\n**Mood State**: ${selectedSelfie.mood}\n\n### 🔄 Google Photos Memories Time-Lapse Comparison:\nComparing today's selfie against **${comparisonTarget.title} (${comparisonTarget.date})**:\n- *Then (${comparisonTarget.date})*: ${comparisonTarget.vibe} (${comparisonTarget.mood})\n- *Now*: ${selectedSelfie.vibe} (${selectedSelfie.mood})\n\n**Notes**: ${customCaption.trim() || 'Selfie memory comparison recorded.'}`,
-        tags: ['#selfie', '#memories', '#time_lapse', '#telemetry']
+        content: `**Current Vibe**: ${selectedSelfie.vibe}\n**Mood State**: ${selectedSelfie.mood}\n\n### 🔄 Google Photos Memories Time-Lapse Comparison:\nComparing today's selfie against **${comparisonTarget.title} (${comparisonTarget.date})**:\n- *Then (${comparisonTarget.date})*: ${comparisonTarget.vibe} (${comparisonTarget.mood})\n- *Now*: ${selectedSelfie.vibe} (${selectedSelfie.mood})\n\n**Notes**: ${customCaption.trim() || 'Selfie memory comparison recorded.'}${isBioEventChecked ? '\n\n*Bio Tie-in*: Linked to recent excretion/bio health event for gut correlation.' : ''}`,
+        tags
       });
 
       setIsProcessing(false);
@@ -60,7 +158,23 @@ export default function PhotoSceneParserModal({
         </div>
 
         {/* Tab Selector */}
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', background: 'rgba(255,255,255,0.04)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', background: 'rgba(255,255,255,0.04)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('upload_image')}
+            style={{
+              flex: 1,
+              padding: '0.4rem',
+              borderRadius: '6px',
+              fontSize: '0.78rem',
+              fontWeight: '700',
+              border: activeTab === 'upload_image' ? '1px solid #10b981' : '1px solid transparent',
+              background: activeTab === 'upload_image' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+              color: activeTab === 'upload_image' ? '#34d399' : 'var(--text-muted)',
+              cursor: 'pointer'
+            }}
+          >
+            🖼️ Upload Local Image
+          </button>
           <button
             onClick={() => setActiveTab('photo_scene')}
             style={{
@@ -75,7 +189,7 @@ export default function PhotoSceneParserModal({
               cursor: 'pointer'
             }}
           >
-            📷 Photo Scene Quantifier
+            📷 Photo Scene
           </button>
           <button
             onClick={() => setActiveTab('selfie_memories')}
@@ -91,11 +205,66 @@ export default function PhotoSceneParserModal({
               cursor: 'pointer'
             }}
           >
-            🤳 Selfie Memories & Time Comparison
+            🤳 Selfie Memories
           </button>
         </div>
 
-        {activeTab === 'selfie_memories' ? (
+        {activeTab === 'upload_image' ? (
+          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#34d399', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Upload size={16} color="#34d399" /> Import Photo & Extract Scene Telemetry:
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageFileChange}
+              style={{ display: 'block', width: '100%', padding: '0.5rem', background: '#111827', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#fff', fontSize: '0.78rem', marginBottom: '0.8rem', cursor: 'pointer' }}
+            />
+
+            {uploadedImagePreview && (
+              <div style={{ textAlign: 'center', marginBottom: '0.8rem', background: 'rgba(0,0,0,0.3)', padding: '0.6rem', borderRadius: '8px' }}>
+                <img
+                  src={uploadedImagePreview}
+                  alt="Uploaded Preview"
+                  style={{ maxHeight: '200px', borderRadius: '8px', border: '2px solid #34d399', objectFit: 'contain' }}
+                />
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+                  <span>{uploadedFileName} • {uploadedFileSize}</span>
+                  <button
+                    type="button"
+                    onClick={handleRotateImage}
+                    className="btn-secondary"
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', color: '#34d399', borderColor: '#34d399' }}
+                  >
+                    🔄 Rotate 90°
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '0.8rem' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                Scene Notes & Atmosphere Caption:
+              </label>
+              <input
+                type="text"
+                value={customCaption}
+                onChange={(e) => setCustomCaption(e.target.value)}
+                placeholder="Describe scene, location, mood, or context..."
+                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '0.45rem', color: '#fff', fontSize: '0.8rem' }}
+              />
+            </div>
+
+            <button
+              onClick={handleSaveUploadedImageZettel}
+              className="btn-primary"
+              style={{ width: '100%', padding: '0.55rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+            >
+              <Sparkles size={15} /> Convert Uploaded Image to Zettel Timeline Note
+            </button>
+          </div>
+        ) : activeTab === 'selfie_memories' ? (
           <div>
             <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.3)', borderRadius: '8px', padding: '0.8rem', marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#f472b6', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -149,7 +318,7 @@ export default function PhotoSceneParserModal({
                 </div>
               </div>
 
-              <div>
+              <div style={{ marginBottom: '0.8rem' }}>
                 <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
                   Selfie Notes & Well-being Observations:
                 </label>
@@ -158,8 +327,18 @@ export default function PhotoSceneParserModal({
                   value={customCaption}
                   onChange={(e) => setCustomCaption(e.target.value)}
                   placeholder="e.g. Energy levels much higher compared to 6 months ago..."
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '0.45rem', color: '#fff', fontSize: '0.8rem' }}
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '0.45rem', color: '#fff', fontSize: '0.8rem', marginBottom: '0.6rem' }}
                 />
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#a78bfa', cursor: 'pointer', background: 'rgba(167, 139, 250, 0.1)', padding: '0.45rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(167, 139, 250, 0.3)' }}>
+                  <input
+                    type="checkbox"
+                    checked={isBioEventChecked}
+                    onChange={(e) => setIsBioEventChecked(e.target.checked)}
+                    style={{ accentColor: '#a78bfa' }}
+                  />
+                  <span>💩 Tie to Logged Bio / Excretion Event (Gut & Health Telemetry)</span>
+                </label>
               </div>
             </div>
 
