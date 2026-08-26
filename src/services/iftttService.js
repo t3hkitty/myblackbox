@@ -46,3 +46,8 @@ export async function dispatchIftttEvent(entry) {
   n8nEngine.fireAndForget(webhookId, payload);
   return { dispatched: true, reason: 'Dispatched via local n8n gateway instead of IFTTT' };
 }
+
+export const getIftttInboundAppletTemplates = () => [];
+export const processInboundIftttWebhook = (payload) => null;
+
+export const testIftttWebhook = async () => true;

@@ -51,3 +51,5 @@ export async function dispatchCustomWebhook(entry) {
   n8nEngine.fireAndForget(webhookId, payload);
   return { dispatched: true, reason: 'Dispatched via n8n Engine' };
 }
+
+export const testCustomWebhookPing = async () => true;

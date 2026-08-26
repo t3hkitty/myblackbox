@@ -1,10 +1,10 @@
 import os
 import ftplib
 
-HOST = "ftp.us.stackcp.com"
-USER = "kitty@artkitty.net"
-PASS = '1bZ1XL3O`t$:'
-REMOTE_DIR = "/public_html/meow/lcmd"
+HOST = os.getenv("FTP_HOST", "ftp.us.stackcp.com")
+USER = os.getenv("FTP_USER", "")
+PASS = os.getenv("FTP_PASS", "")
+REMOTE_DIR = os.getenv("FTP_REMOTE_DIR", "/public_html/meow/lcmd")
 LOCAL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist")
 
 def make_dirs_recursive(ftp, remote_dir):
@@ -38,6 +38,11 @@ def upload_directory(ftp, local_dir, remote_dir):
 def main():
     if not os.path.exists(LOCAL_DIR):
         print(f"Error: {LOCAL_DIR} does not exist. Run npm run build first.")
+        return
+
+    if not USER or not PASS:
+        print("Error: FTP_USER or FTP_PASS environment variables are not set.")
+        print("Please run with: FTP_USER=... FTP_PASS=... python deploy_meow.py")
         return
 
     print(f"Connecting to {HOST} as {USER}...")

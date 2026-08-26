@@ -46,6 +46,7 @@ import { dispatchIftttEvent } from './services/iftttService';
 import { dispatchCustomWebhook } from './services/customWebhookService';
 import { DualPaneWorkspace } from '@lorik/shared-kawaii-ui';
 import { captureOAuthTokenFromUrlHash, startAutoPollingGoogleTasks, saveAccessToken, connectGoogleAccount, logSyncDiagnostic } from './services/googleDriveAuthEngine';
+import { setupLinkInterceptor } from './plugins/mbbLinkInterceptor';
 
 import {
   getLogs,
@@ -265,6 +266,25 @@ export default function App() {
     });
   };
 
+  const mbbActionHandlerRef = React.useRef(null);
+  mbbActionHandlerRef.current = (payload) => {
+    const { action, params } = payload;
+    if (action === 'switch-vault' || action === 'vault' || action === 'switch') {
+      const vaultMode = params.vault || params.mode;
+      if (vaultMode && ['all', 'school', 'work', 'accounts', 'personal'].includes(vaultMode)) {
+        handleSelectMode(vaultMode);
+      }
+    } else if (action === 'sip') {
+      const amount = parseInt(params.amount || '1', 10);
+      const level = params.level || 'water';
+      handleLogSip(amount, { id: level, label: level.charAt(0).toUpperCase() + level.slice(1), emoji: '💧' });
+    } else if (action === 'pee') {
+      handleLogPee();
+    } else if (action === 'poo') {
+      handleLogPoo();
+    }
+  };
+
   useEffect(() => {
     // Capture OAuth access token if returning from Google redirect
     captureOAuthTokenFromUrlHash();
@@ -278,6 +298,16 @@ export default function App() {
       }
     };
     window.addEventListener('message', handleOAuthMessage);
+
+    // Initialize Anymd Link Interceptor
+    const cleanupInterceptor = setupLinkInterceptor();
+    window.mbbPluginBundle = {
+      handleAction: (payload) => {
+        if (mbbActionHandlerRef.current) {
+          mbbActionHandlerRef.current(payload);
+        }
+      }
+    };
 
     // Load stored state
     setLogs(getLogs());
@@ -314,6 +344,8 @@ export default function App() {
     return () => {
       stopPolling();
       window.removeEventListener('message', handleOAuthMessage);
+      cleanupInterceptor();
+      delete window.mbbPluginBundle;
     };
   }, []);
 
@@ -912,8 +944,6 @@ export default function App() {
               onImportLogs={handleSaveZettel}
             />
           )}
-
-        </div>
 
         </div>
           }

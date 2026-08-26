@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Share2, RefreshCw, CheckCircle, ExternalLink, Sparkles, Shield, EyeOff, MapPin, MessageSquare, Heart, Music, FileSpreadsheet, Upload, Link, MessageCircle, Zap, Send, ArrowDown, Copy, Check } from 'lucide-react';
 import { INTEGRATION_SOURCES, fetchLiveConnectionData, fetchMockConnectionData } from '../services/mockIntegrations';
-import { getIftttInboundAppletTemplates, processInboundIftttWebhook } from '../services/iftttService';
+import { processInboundIftttWebhook } from '../services/iftttService';
 import confetti from 'canvas-confetti';
 
 export default function DataImportHub({
@@ -106,7 +106,7 @@ export default function DataImportHub({
     alert('⚡ Photo Scene imported into Zettel timeline!');
   };
 
-  const iftttTemplates = getIftttInboundAppletTemplates();
+  const iftttTemplates = [];
 
   // Privacy Toggles
   const [privacySettings, setPrivacySettings] = useState({

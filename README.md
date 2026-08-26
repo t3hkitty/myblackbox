@@ -89,6 +89,110 @@ To link your personal Google Account for direct `/Drive/Apps/myBlackbox/` sync a
 4. Copy your generated Client ID (`123456-abc.apps.googleusercontent.com`).
 5. Open **Settings (⚙️) ➔ 🔐 Google OAuth Keys** in the app UI and paste your Client ID!
 
+## 🔗 Deep Link Routing & Action Interceptor
+
+     /\_/\   --- "Let's click without reload, purr!"
+    ( o.o )
+    >  ^  <
+
+**myBlackbox** includes the custom **Anymd Plugin Core** link interceptor to route `mbb://` and `web+mbb://` URI protocols internally without page reloads.
+
+- 🗃️ **Vault Switches**: Intercepts `mbb://vault/<vaultName>` to switch active workspace modes seamlessly (`all`, `school`, `work`, `accounts`, `personal`).
+- ⚡ **1-Click Telemetry Actions**:
+  - `mbb://sip?amount=2&level=water` - Quick log hydration sips.
+  - `mbb://pee` - Quick log urination events.
+  - `mbb://poo` - Quick log bowel movement events.
+
+## 🎮 Terminal Cozy Engines (State-Machines) 🐱
+
+   /\_/\  
+  ( >.< ) ~ "We have backend state-machines too! Rawr!"
+   >   < 
+
+Located in the [engines/](file:///C:/Users/lorik/.gemini/antigravity/scratch/mbb/engines) folder, these terminal tools maintain decoupled state tracking:
+
+- 🐻 **Hungry Bear & Honey Jar Engine (`mbb-bear-engine.py`)**: A cozy terminal-based state machine for metabolic tracking and logging. It ticks down honey jar level over time, requiring you to `feed` the bear to build daily streaks.
+  - View status: `python engines/mbb-bear-engine.py status`
+  - Replenish jar: `python engines/mbb-bear-engine.py feed`
+  - Log burn: `python engines/mbb-bear-engine.py burn`
+- 💨 **Breath Garden (`mbb-breath-garden.py`)**: Log breathing breaks and watch your virtual garden grow with ASCII flowers.
+- 💧 **Moisture Anticipator (`mbb-moisture-anticipator.py`)**: Predicts next hydration requirements using historical logging trends.
+- 🔒 **Privacy Alert System (`mbb-privacy-alert-system.py`)**: Scans logs to prevent PII exposure.
+
+---
+
+## 🌐 Deployment Guide 🐾
+
+      /\_/\
+    =( °.°) = ~ "Let's put this online, meow!"
+    __(")_(")_______________________________
+
+### 1. 🐙 Deploying to GitHub Pages (Recommended)
+
+Since **myBlackbox** is a purely static frontend React/Vite app, it is perfect for GitHub Pages.
+
+#### Option A: Automatic via GitHub Actions
+Create a file at `.github/workflows/deploy.yml` with:
+```yaml
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+Ensure GitHub Pages source is set to **GitHub Actions** in your Repository Settings ➔ Pages.
+
+#### Option B: Manual build and push
+1. Build the production bundle:
+   ```bash
+   npm run build
+   ```
+2. Deploy the `dist` directory to your hosting provider or publish the `dist` folder directly onto a `gh-pages` branch.
+
+### 2. 🚀 Deploying to FTP (e.g., `meow.artkitty.net/lcmd`)
+
+The included `deploy_meow.py` script uploads the built workspace via FTP. To keep credentials safe and prevent PII leaks:
+
+1. Build the project: `npm run build`
+2. Run the deployment script with credentials passed as environment variables:
+   ```bash
+   $env:FTP_USER="kitty@artkitty.net"; $env:FTP_PASS="your_password"; python deploy_meow.py
+   ```
+   *(Or on Linux/macOS: `FTP_USER="kitty@artkitty.net" FTP_PASS="your_password" python deploy_meow.py`)*
+
 ---
 
 ## 📄 License & Terms of Service Compliance
