@@ -12,28 +12,32 @@
 export const MBB_ACTION_EVENT = 'mbb-action';
 
 export interface MbbActionPayload {
-  protocol: 'mbb:' | 'web+mbb:';
+  protocol: 'mbb:' | 'web+mbb:' | 'kittlibr:';
   action: string;
   params: Record<string, string>;
   originalUri: string;
 }
 
 /**
- * Parses mbb:// or web+mbb:// URIs into structured action and parameters
+ * Parses mbb://, web+mbb://, or kittlibr:// URIs into structured action and parameters
  */
 export function parseMbbUri(uri: string): MbbActionPayload | null {
   try {
     const cleanUri = uri.trim();
-    if (!cleanUri.startsWith('mbb://') && !cleanUri.startsWith('web+mbb://')) {
+    if (!cleanUri.startsWith('mbb://') && !cleanUri.startsWith('web+mbb://') && !cleanUri.startsWith('kittlibr://')) {
       return null;
     }
 
-    const protocol = cleanUri.startsWith('mbb://') ? 'mbb:' : 'web+mbb:';
-    
+    let protocol: 'mbb:' | 'web+mbb:' | 'kittlibr:' = 'mbb:';
+    if (cleanUri.startsWith('kittlibr://')) protocol = 'kittlibr:';
+    else if (cleanUri.startsWith('web+mbb://')) protocol = 'web+mbb:';
+
     // For parsing using URL API, substitute protocol to http temporary
     let parseableUrl = cleanUri;
     if (protocol === 'mbb:') {
       parseableUrl = cleanUri.replace('mbb://', 'http://mbb-action/');
+    } else if (protocol === 'kittlibr:') {
+      parseableUrl = cleanUri.replace('kittlibr://', 'http://kittlibr-action/');
     } else {
       parseableUrl = cleanUri.replace('web+mbb://', 'http://mbb-action/');
     }
@@ -103,7 +107,7 @@ export function setupLinkInterceptor(): () => void {
     const href = anchor.getAttribute('href');
     if (!href) return;
 
-    if (href.startsWith('mbb://') || href.startsWith('web+mbb://')) {
+    if (href.startsWith('mbb://') || href.startsWith('web+mbb://') || href.startsWith('kittlibr://')) {
       event.preventDefault();
       const parsed = parseMbbUri(href);
       if (parsed) {
@@ -118,7 +122,7 @@ export function setupLinkInterceptor(): () => void {
   const handleInitialQuery = () => {
     const params = new URLSearchParams(window.location.search);
     const customUri = params.get('uri');
-    if (customUri && (customUri.startsWith('mbb://') || customUri.startsWith('web+mbb://'))) {
+    if (customUri && (customUri.startsWith('mbb://') || customUri.startsWith('web+mbb://') || customUri.startsWith('kittlibr://'))) {
       const parsed = parseMbbUri(customUri);
       if (parsed) {
         routeMbbAction(parsed);

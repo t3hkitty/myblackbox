@@ -23,6 +23,11 @@
 
 ## 1. Project Identity & Core Philosophy
 
+- **Scope Boundary (MBB = Tasks & Routines, Not Vaultr)**: MBB is strictly focused on task management, Google Tasks (`gtasks`) bidirectional sync, and Android Tasker/MacroDroid integration (`kittlibr://capture` / `MBB.prj.xml` intent flows). All heavy file storage and seedbox operations belong to `vaultr`; MBB UI and workflows are cleanly decoupled from `vaultr`.
+- **Decluttered 3-View Architecture**:
+  1. `⚡ Tasks` (Default): Slim Quick Capture + scannable, collapsible task list grouped by priority/due state, concise tag filter chips, and interactive ASCII Pet Companion.
+  2. `🔄 Sync & Automations`: Unified Google Auth AIO card, Google Tasks (`gtasks`) two-way sync controls, and direct Tasker/MacroDroid intent automation mappings.
+  3. `📋 Diagnostics & Logs`: Token debug inspector, raw JSON payloads, and verbose activity/API diagnostic logs isolated from the primary workspace.
 - **Personal Flight Recorder**: Captures passive background context, active micro-actions, and somatic triggers so you can retrospectively diagnose cognitive crashes, energy slumps, and hyperfocus loops without manual logging friction.
 - **Zero-Server / Laptop-Off Baseline**: All state lives in flat `.md` files with human-readable YAML frontmatter and `.anymd` directory sidecars inside `meow-vault`. Operates 100% offline via local filesystem paths (`C:\meow-vault` on Windows) or Android Storage Access Framework (SAF directory picker). No VPS, Docker daemon, database server, or SQLite lock-in required.
 - **Tech Stack Rules**:

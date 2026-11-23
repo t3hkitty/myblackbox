@@ -118,28 +118,71 @@ export default function Navbar({
         {/* Live PT Clock Badge & Google Cloud Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           
-          {/* Workspace Mode Quick Switcher */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          {/* 3 Top-Level Focused Workspace Views */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.45)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
             <button
-              onClick={() => onSelectMode('all')}
+              onClick={() => onSelectMode('tasks')}
               style={{
-                padding: '0.25rem 0.6rem',
-                fontSize: '0.72rem',
-                borderRadius: '6px',
+                padding: '0.35rem 0.8rem',
+                fontSize: '0.78rem',
+                borderRadius: '7px',
                 border: 'none',
-                background: activeMode === 'all' ? '#3b82f6' : 'transparent',
-                color: activeMode === 'all' ? '#fff' : 'var(--text-muted)',
-                fontWeight: '700',
-                cursor: 'pointer'
+                background: (activeMode === 'tasks' || activeMode === 'all') ? '#2563eb' : 'transparent',
+                color: (activeMode === 'tasks' || activeMode === 'all') ? '#fff' : 'var(--text-muted)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem'
               }}
             >
-              🌐 All Modes
+              ⚡ Tasks
             </button>
+            <button
+              onClick={() => onSelectMode('sync_automations')}
+              style={{
+                padding: '0.35rem 0.8rem',
+                fontSize: '0.78rem',
+                borderRadius: '7px',
+                border: 'none',
+                background: activeMode === 'sync_automations' ? '#059669' : 'transparent',
+                color: activeMode === 'sync_automations' ? '#fff' : 'var(--text-muted)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
+            >
+              🔄 Sync &amp; Automations
+            </button>
+            <button
+              onClick={() => onSelectMode('diagnostics_logs')}
+              style={{
+                padding: '0.35rem 0.8rem',
+                fontSize: '0.78rem',
+                borderRadius: '7px',
+                border: 'none',
+                background: activeMode === 'diagnostics_logs' ? '#d97706' : 'transparent',
+                color: activeMode === 'diagnostics_logs' ? '#fff' : 'var(--text-muted)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
+            >
+              📋 Diagnostics &amp; Logs
+            </button>
+          </div>
+
+          {/* Sub-Mode Context Selector */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <button
               onClick={() => onSelectMode('school')}
               style={{
-                padding: '0.25rem 0.6rem',
-                fontSize: '0.72rem',
+                padding: '0.25rem 0.55rem',
+                fontSize: '0.7rem',
                 borderRadius: '6px',
                 border: 'none',
                 background: activeMode === 'school' ? '#8b5cf6' : 'transparent',
@@ -148,13 +191,13 @@ export default function Navbar({
                 cursor: 'pointer'
               }}
             >
-              🎓 School Mode
+              🎓 School
             </button>
             <button
               onClick={() => onSelectMode('work')}
               style={{
-                padding: '0.25rem 0.6rem',
-                fontSize: '0.72rem',
+                padding: '0.25rem 0.55rem',
+                fontSize: '0.7rem',
                 borderRadius: '6px',
                 border: 'none',
                 background: activeMode === 'work' ? '#10b981' : 'transparent',
@@ -163,22 +206,23 @@ export default function Navbar({
                 cursor: 'pointer'
               }}
             >
-              💼 Work Mode
+              💼 Work
             </button>
             <button
-              onClick={() => onSelectMode('accounts')}
+              onClick={() => onSelectMode('legacy_feed')}
               style={{
-                padding: '0.25rem 0.6rem',
-                fontSize: '0.72rem',
+                padding: '0.25rem 0.55rem',
+                fontSize: '0.7rem',
                 borderRadius: '6px',
                 border: 'none',
-                background: activeMode === 'accounts' ? '#f59e0b' : 'transparent',
-                color: activeMode === 'accounts' ? '#fff' : 'var(--text-muted)',
+                background: activeMode === 'legacy_feed' ? '#6366f1' : 'transparent',
+                color: activeMode === 'legacy_feed' ? '#fff' : 'var(--text-muted)',
                 fontWeight: '700',
                 cursor: 'pointer'
               }}
+              title="View full legacy two-column timeline feed"
             >
-              💳 Accounts
+              📡 Feed
             </button>
           </div>
 

@@ -49,6 +49,10 @@ import { dispatchCustomWebhook } from './services/customWebhookService';
 import { DualPaneWorkspace } from '@lorik/shared-kawaii-ui';
 import { captureOAuthTokenFromUrlHash, startAutoPollingGoogleTasks, saveAccessToken, connectGoogleAccount, logSyncDiagnostic } from './services/googleDriveAuthEngine';
 import { setupLinkInterceptor } from './plugins/mbbLinkInterceptor';
+import { TasksDashboardView } from './components/dashboard/TasksDashboardView';
+import { SyncAutomationsView } from './components/dashboard/SyncAutomationsView';
+import { DiagnosticsLogsView } from './components/dashboard/DiagnosticsLogsView';
+import { TaskerIntentService } from './services/taskerIntentService';
 
 import {
   getLogs,
@@ -306,8 +310,9 @@ export default function App() {
     };
     window.addEventListener('message', handleOAuthMessage);
 
-    // Initialize Anymd Link Interceptor
+    // Initialize Anymd Link Interceptor & Tasker Intent Listeners
     const cleanupInterceptor = setupLinkInterceptor();
+    const cleanupTaskerIntents = TaskerIntentService.setupGlobalIntentListeners();
     window.mbbPluginBundle = {
       handleAction: (payload) => {
         if (mbbActionHandlerRef.current) {
@@ -352,6 +357,7 @@ export default function App() {
       stopPolling();
       window.removeEventListener('message', handleOAuthMessage);
       cleanupInterceptor();
+      cleanupTaskerIntents();
       delete window.mbbPluginBundle;
     };
   }, []);
@@ -821,177 +827,186 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main Responsive Grid Layout */}
+      {/* Main Responsive Layout: 3 Focused Views or Legacy Feed */}
       <main style={{ padding: '0 1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        
-        <DualPaneWorkspace 
-          leftTitle="Dashboard & Tasks"
-          leftIcon={<span style={{ fontSize: '1.2rem' }}>⚡</span>}
-          rightTitle="Trackers & Feeds"
-          rightIcon={<span style={{ fontSize: '1.2rem' }}>📡</span>}
-          leftContent={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
-          {panelVisibility.best_practices && (
-            <BestPracticesWidget
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              onStartBlackboxTask={(title) => {
-                handleSaveZettel({
-                  title: `Started Task: ${title}`,
-                  type: 'task',
-                  content: `Started task from #roundtoit backlog`,
-                  tags: ['#blackbox_task', '#roundtoit', '#workflow']
-                });
+        {activeMode === 'sync_automations' ? (
+          <SyncAutomationsView />
+        ) : activeMode === 'diagnostics_logs' ? (
+          <DiagnosticsLogsView />
+        ) : activeMode !== 'legacy_feed' && activeMode !== 'school' && activeMode !== 'work' ? (
+          /* Default Focused View 1: Tasks */
+          <TasksDashboardView onSaveZettel={handleSaveZettel} />
+        ) : (
+          /* Legacy Multi-Panel DualPaneWorkspace for school, work, or legacy_feed */
+          <DualPaneWorkspace 
+            leftTitle="Dashboard & Tasks"
+            leftIcon={<span style={{ fontSize: '1.2rem' }}>⚡</span>}
+            rightTitle="Trackers & Feeds"
+            rightIcon={<span style={{ fontSize: '1.2rem' }}>📡</span>}
+            leftContent={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {panelVisibility.best_practices && (
+              <BestPracticesWidget
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onStartBlackboxTask={(title) => {
+                  handleSaveZettel({
+                    title: `Started Task: ${title}`,
+                    type: 'task',
+                    content: `Started task from #roundtoit backlog`,
+                    tags: ['#blackbox_task', '#roundtoit', '#workflow']
+                  });
+                }}
+              />
+            )}
+
+            {panelVisibility.hyperbole_monitor && !pinnedPanels.hyperbole_monitor && (
+              renderPanelComponent('hyperbole_monitor')
+            )}
+
+            {panelVisibility.movement_fitness && !pinnedPanels.movement_fitness && (
+              renderPanelComponent('movement_fitness')
+            )}
+
+            {panelVisibility.calendar_sanitizer && !pinnedPanels.calendar_sanitizer && (
+              renderPanelComponent('calendar_sanitizer')
+            )}
+
+            {panelVisibility.upcoming_events && !pinnedPanels.upcoming_events && (
+              renderPanelComponent('upcoming_events')
+            )}
+
+            {panelVisibility.accounts && !pinnedPanels.accounts && (
+              renderPanelComponent('accounts')
+            )}
+
+            {panelVisibility.academic_hub && !pinnedPanels.academic_hub && (
+              renderPanelComponent('academic_hub')
+            )}
+
+            {panelVisibility.creator_studio && !pinnedPanels.creator_studio && (
+              renderPanelComponent('creator_studio')
+            )}
+
+            {panelVisibility.on_this_day && !pinnedPanels.on_this_day && (
+              renderPanelComponent('on_this_day')
+            )}
+
+            {panelVisibility.c4_engine && !pinnedPanels.c4_engine && (
+              renderPanelComponent('c4_engine')
+            )}
+
+            {panelVisibility.braindump && !pinnedPanels.braindump && (
+              renderPanelComponent('braindump')
+            )}
+
+            {panelVisibility.troubleshooting && (
+              <TroubleshootingPanel
+                allLogs={logs}
+                onQuickTagLog={handleSaveZettel}
+              />
+            )}
+
+            {panelVisibility.google_photos && !pinnedPanels.google_photos && (
+              renderPanelComponent('google_photos')
+            )}
+
+            {panelVisibility.weather && (
+              <WeatherLoggerWidget
+                onLogWeatherZettel={handleSaveZettel}
+              />
+            )}
+
+            {panelVisibility.contacts && !pinnedPanels.contacts && (
+              renderPanelComponent('contacts')
+            )}
+
+            {panelVisibility.attraction && (
+              <AttractionPanelWidget
+                allLogs={logs}
+                goals={goals}
+                onLogAttractionZettel={handleSaveZettel}
+              />
+            )}
+
+            {panelVisibility.spotify && (
+              <SpotifySkipWidget
+                onLogSpotifyZettel={handleSaveZettel}
+              />
+            )}
+
+            {panelVisibility.goals && !pinnedPanels.goals && (
+              renderPanelComponent('goals')
+            )}
+
+            {panelVisibility.sips && (
+              <SipTrackerWidget
+                sipSettings={sipSettings}
+                onLogSip={handleLogSip}
+                onLogPee={handleLogPee}
+                onLogPoo={handleLogPoo}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onSaveSipSettings={handleSaveSipSettings}
+              />
+            )}
+
+            {panelVisibility.addiction_monitor && !pinnedPanels.addiction_monitor && (
+              renderPanelComponent('addiction_monitor')
+            )}
+
+            {renderPanelComponent('health_telemetry')}
+
+            {panelVisibility.tasks && !pinnedPanels.tasks && (
+              renderPanelComponent('tasks')
+            )}
+
+            {panelVisibility.telemetry_import && (
+              <DataImportHub
+                onImportLogs={handleSaveZettel}
+              />
+            )}
+
+          </div>
+            }
+            rightContent={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {panelVisibility.live_tweets && !pinnedPanels.live_tweets && (
+              renderPanelComponent('live_tweets')
+            )}
+
+            <GoogleKeepWidget
+              onConvertToZettel={handleSaveZettel}
+            />
+
+            <EbookTracker
+              allLogs={logs}
+              activeMoodSet={activeMoodSet}
+              onSaveBookReviewZettel={handleSaveZettel}
+            />
+
+            <TagTallyWidget
+              allLogs={logs}
+              onSelectTagFilter={(tag) => setActiveTagTallyFilter(tag)}
+            />
+
+            <LogTimeline
+              logs={logs}
+              onDeleteLog={handleDeleteLog}
+              onMassDeleteLogs={handleMassDeleteLogs}
+              onBulkUpdateLogs={handleBulkUpdateLogs}
+              onToggleArchiveLog={handleToggleArchiveLog}
+              onDeleteAllSampleLogs={() => {
+                const updated = deleteAllSampleLogs();
+                setLogs(updated);
               }}
+              externalTagFilter={activeTagTallyFilter}
             />
-          )}
 
-          {panelVisibility.hyperbole_monitor && !pinnedPanels.hyperbole_monitor && (
-            renderPanelComponent('hyperbole_monitor')
-          )}
-
-          {panelVisibility.movement_fitness && !pinnedPanels.movement_fitness && (
-            renderPanelComponent('movement_fitness')
-          )}
-
-          {panelVisibility.calendar_sanitizer && !pinnedPanels.calendar_sanitizer && (
-            renderPanelComponent('calendar_sanitizer')
-          )}
-
-          {panelVisibility.upcoming_events && !pinnedPanels.upcoming_events && (
-            renderPanelComponent('upcoming_events')
-          )}
-
-          {panelVisibility.accounts && !pinnedPanels.accounts && (
-            renderPanelComponent('accounts')
-          )}
-
-          {panelVisibility.academic_hub && !pinnedPanels.academic_hub && (
-            renderPanelComponent('academic_hub')
-          )}
-
-          {panelVisibility.creator_studio && !pinnedPanels.creator_studio && (
-            renderPanelComponent('creator_studio')
-          )}
-
-          {panelVisibility.on_this_day && !pinnedPanels.on_this_day && (
-            renderPanelComponent('on_this_day')
-          )}
-
-          {panelVisibility.c4_engine && !pinnedPanels.c4_engine && (
-            renderPanelComponent('c4_engine')
-          )}
-
-          {panelVisibility.braindump && !pinnedPanels.braindump && (
-            renderPanelComponent('braindump')
-          )}
-
-          {panelVisibility.troubleshooting && (
-            <TroubleshootingPanel
-              allLogs={logs}
-              onQuickTagLog={handleSaveZettel}
-            />
-          )}
-
-          {panelVisibility.google_photos && !pinnedPanels.google_photos && (
-            renderPanelComponent('google_photos')
-          )}
-
-          {panelVisibility.weather && (
-            <WeatherLoggerWidget
-              onLogWeatherZettel={handleSaveZettel}
-            />
-          )}
-
-          {panelVisibility.contacts && !pinnedPanels.contacts && (
-            renderPanelComponent('contacts')
-          )}
-
-          {panelVisibility.attraction && (
-            <AttractionPanelWidget
-              allLogs={logs}
-              goals={goals}
-              onLogAttractionZettel={handleSaveZettel}
-            />
-          )}
-
-          {panelVisibility.spotify && (
-            <SpotifySkipWidget
-              onLogSpotifyZettel={handleSaveZettel}
-            />
-          )}
-
-          {panelVisibility.goals && !pinnedPanels.goals && (
-            renderPanelComponent('goals')
-          )}
-
-          {panelVisibility.sips && (
-            <SipTrackerWidget
-              sipSettings={sipSettings}
-              onLogSip={handleLogSip}
-              onLogPee={handleLogPee}
-              onLogPoo={handleLogPoo}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              onSaveSipSettings={handleSaveSipSettings}
-            />
-          )}
-
-          {panelVisibility.addiction_monitor && !pinnedPanels.addiction_monitor && (
-            renderPanelComponent('addiction_monitor')
-          )}
-
-          {renderPanelComponent('health_telemetry')}
-
-          {panelVisibility.tasks && !pinnedPanels.tasks && (
-            renderPanelComponent('tasks')
-          )}
-
-          {panelVisibility.telemetry_import && (
-            <DataImportHub
-              onImportLogs={handleSaveZettel}
-            />
-          )}
-
-        </div>
-          }
-          rightContent={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
-          {panelVisibility.live_tweets && !pinnedPanels.live_tweets && (
-            renderPanelComponent('live_tweets')
-          )}
-
-          <GoogleKeepWidget
-            onConvertToZettel={handleSaveZettel}
+          </div>
+            }
           />
-
-          <EbookTracker
-            allLogs={logs}
-            activeMoodSet={activeMoodSet}
-            onSaveBookReviewZettel={handleSaveZettel}
-          />
-
-          <TagTallyWidget
-            allLogs={logs}
-            onSelectTagFilter={(tag) => setActiveTagTallyFilter(tag)}
-          />
-
-          <LogTimeline
-            logs={logs}
-            onDeleteLog={handleDeleteLog}
-            onMassDeleteLogs={handleMassDeleteLogs}
-            onBulkUpdateLogs={handleBulkUpdateLogs}
-            onToggleArchiveLog={handleToggleArchiveLog}
-            onDeleteAllSampleLogs={() => {
-              const updated = deleteAllSampleLogs();
-              setLogs(updated);
-            }}
-            externalTagFilter={activeTagTallyFilter}
-          />
-
-        </div>
-          }
-        />
+        )}
       </main>
 
       {/* Modals */}
