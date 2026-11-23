@@ -11,3 +11,6 @@ export * from './recurrence';
 export * from './store';
 export * from './syncAdapter';
 export * from './MBBTaskBoardModal';
+
+// MBB Modular Extension Bundle Re-exports
+export * from '../../extensions/mbb';

@@ -1,0 +1,36 @@
+{
+  "id": "org.anymd.extension.mbb",
+  "name": "My Black Box (MBB) Bundle",
+  "version": "1.0.0",
+  "description": "Tasks.org-parity task engine, Roman numeral completion tickers, Stage Director milestones, emoji folder trees, Telemeowtrics capture, and Google Tasks two-way sync for AnyMD.",
+  "author": "t3hkitty & Kawaiian AI",
+  "enabledByDefault": true,
+  "category": "task-telemetry",
+  "entry": "./index.tsx",
+  "permissions": [
+    "vault:read",
+    "vault:write",
+    "vault:watch",
+    "router:protocols",
+    "ui:mount:quickbar",
+    "ui:mount:modals",
+    "ui:mount:settings"
+  ],
+  "supportedProtocols": [
+    "mbb://ticker/*",
+    "mbb://state/*",
+    "mbb://vault/*",
+    "kittlibr://capture"
+  ],
+  "supportedBroadcasts": [
+    "org.anymd.broadcast.UNIFIED_FIREHOSE",
+    "org.anymd.broadcast.TASKER_WEBHOOK"
+  ],
+  "storage": {
+    "defaultVault": "meow-vault",
+    "sidecarDir": ".anymd",
+    "inboxDir": "inbox",
+    "tasksDir": "tasks",
+    "tickersDir": "tickers"
+  }
+}

@@ -7,6 +7,7 @@ import { getCustomWebhookConfig, saveCustomWebhookConfig, testCustomWebhookPing 
 import { getGoogleCredentials, saveGoogleCredentials, reauthenticateGoogleAccount, directConnectGoogleEmail, getGoogleAuthSession, fetchUserGoogleTaskLists, syncAllZettelsToGoogleDrive, openOAuthPlaygroundHelper, extractOAuthTokenFromUrl } from '../services/googleDriveAuthEngine';
 
 import { getSpotifyCredentials, saveSpotifyCredentials, getSpotifyAccessToken, saveSpotifyAccessToken, triggerSpotifyAuthPopup } from '../services/spotifyService';
+import { anyMDExtensionHost } from '../../extensions/mbb/host/AnyMDExtensionHost';
 
 export default function SettingsModal({
   isOpen,
@@ -435,6 +436,22 @@ export default function SettingsModal({
           >
             <Sparkles size={14} style={{ display: 'inline', marginRight: '4px' }} />
             🤖 Gemini AI Key
+          </button>
+
+          <button
+            onClick={() => setActiveTab('stage_director')}
+            style={{
+              background: activeTab === 'stage_director' ? 'rgba(236, 72, 153, 0.2)' : 'transparent',
+              color: activeTab === 'stage_director' ? '#f472b6' : 'var(--text-muted)',
+              border: activeTab === 'stage_director' ? '1px solid #ec4899' : '1px solid transparent',
+              borderRadius: '8px',
+              padding: '0.4rem 0.8rem',
+              fontWeight: '700',
+              fontSize: '0.85rem',
+              cursor: 'pointer'
+            }}
+          >
+            🎯 Stage Director & MBB Extension
           </button>
         </div>
 
@@ -1469,6 +1486,44 @@ export default function SettingsModal({
               </div>
             </div>
           </form>
+        )}
+
+        {activeTab === 'stage_director' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            <div style={{ background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.3)', padding: '1rem', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1rem', color: '#f472b6', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🐾 MBB Extension Bundle Status
+                </h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', color: '#fff' }}>
+                  <input
+                    type="checkbox"
+                    checked={anyMDExtensionHost.isExtensionEnabled('org.anymd.extension.mbb')}
+                    onChange={(e) => {
+                      anyMDExtensionHost.setExtensionEnabled('org.anymd.extension.mbb', e.target.checked);
+                      // Force re-render of settings
+                      setActiveTab('stage_director');
+                    }}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span>Extension Enabled</span>
+                </label>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                When enabled, AnyMD mounts MBB flight deck quickbar, Tasks.org-parity task board, Roman numeral tickers, and Stage Director milestone profiles. Disabling leaves AnyMD as a clean standalone Markdown editor.
+              </p>
+            </div>
+
+            {/* Mount Registered Extension Settings Panels */}
+            {anyMDExtensionHost.getUIMounts('settings-panel').map((mount) => {
+              const MountComp = mount.component;
+              return (
+                <div key={mount.id} style={{ background: '#fff', padding: '1rem', borderRadius: '12px', border: '2px solid #000' }}>
+                  <MountComp />
+                </div>
+              );
+            })}
+          </div>
         )}
 
       </div>

@@ -10,6 +10,8 @@ import TaskBlackboxWidget from './components/TaskBlackboxWidget';
 import DataImportHub from './components/DataImportHub';
 import LogTimeline from './components/LogTimeline';
 import SettingsModal from './components/SettingsModal';
+import { anyMDExtensionHost } from '../extensions/mbb/host/AnyMDExtensionHost';
+import '../extensions/mbb'; // Auto-registers MBB extension bundle
 import GoalsTrackerWidget from './components/GoalsTrackerWidget';
 import JournalGeneratorModal from './components/JournalGeneratorModal';
 import LiveMicroTweetBar from './components/LiveMicroTweetBar';
@@ -268,7 +270,12 @@ export default function App() {
 
   const mbbActionHandlerRef = React.useRef(null);
   mbbActionHandlerRef.current = (payload) => {
-    const { action, params } = payload;
+    const { action, params, originalUri } = payload;
+    // Dispatch to AnyMDExtensionHost Event Router if full URI or registered extension
+    if (originalUri) {
+      anyMDExtensionHost.router.dispatchUri(originalUri);
+    }
+
     if (action === 'switch-vault' || action === 'vault' || action === 'switch') {
       const vaultMode = params.vault || params.mode;
       if (vaultMode && ['all', 'school', 'work', 'accounts', 'personal'].includes(vaultMode)) {
@@ -1131,6 +1138,16 @@ export default function App() {
         }}
       />
 
+
+      {/* Extension Host UI Mount Slots (QuickBar, TaskBoard Modal, etc.) */}
+      {anyMDExtensionHost.getUIMounts('quickbar').map((mount) => {
+        const MountComponent = mount.component;
+        return <MountComponent key={mount.id} />;
+      })}
+      {anyMDExtensionHost.getUIMounts('taskboard-modal').map((mount) => {
+        const MountComponent = mount.component;
+        return <MountComponent key={mount.id} />;
+      })}
 
     </div>
   );
