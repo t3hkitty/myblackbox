@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Star, Plus, Play, CheckCircle, Clock, Trash2, XCircle, Flame, MessageSquare, ChevronDown, ChevronUp, Quote, CheckSquare, Square, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { BookOpen, Star, Plus, Play, CheckCircle, Clock, Trash2, XCircle, Flame, MessageSquare, ChevronDown, ChevronUp, Quote, CheckSquare, Square, RefreshCw, AlertTriangle, ArrowLeft, Zap, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import BookReviewModal from './BookReviewModal';
 import LibraryMediaPickerModal from './LibraryMediaPickerModal';
+import { KittlibrBridgeService } from '../services/kittlibrBridgeService';
 
 const DISASSOCIATED_BOOKS_KEY = 'blackbox_disassociated_books_v1';
 const STORED_READING_SHELF_KEY = 'blackbox_stored_reading_shelf_v1';
@@ -94,6 +95,20 @@ export default function EbookTracker({
     alert(`📖 Reading Session logged for "${book.title}"!`);
   };
 
+  const [kittlibrOpens, setKittlibrOpens] = useState(() => KittlibrBridgeService.getRecentBookOpens());
+  const [litanyModalBook, setLitanyModalBook] = useState(null);
+  const [litanyText, setLitanyText] = useState('');
+  const [litanyQuote, setLitanyQuote] = useState('');
+
+  // Listen to live Kittlibr updates
+  useEffect(() => {
+    const handleKittlibrUpdate = (e) => {
+      if (e?.detail) setKittlibrOpens(e.detail);
+    };
+    window.addEventListener('kittlibr-recent-opens-updated', handleKittlibrUpdate);
+    return () => window.removeEventListener('kittlibr-recent-opens-updated', handleKittlibrUpdate);
+  }, []);
+
   // Save changes to localStorage whenever currentlyReading or removedBookIds update
   useEffect(() => {
     localStorage.setItem(DISASSOCIATED_BOOKS_KEY, JSON.stringify(removedBookIds));
@@ -117,13 +132,66 @@ export default function EbookTracker({
     fromLog: true
   }));
 
-  // Combine items safely
+  // Map Kittlibr sidecar recent opens into shelf items
+  const kittlibrReadingEntries = kittlibrOpens.map(k => ({
+    id: k.bookId,
+    title: k.title,
+    author: k.author || 'Kittlibr Reader',
+    progress: k.currentChapter || `${k.progressPercent || 0}% read (p. ${k.currentPage || 0})`,
+    category: '#reading',
+    isKittlibr: true,
+    format: k.format || 'EPUB',
+    progressPercent: k.progressPercent,
+    lastOpenedPT: k.lastOpenedPT,
+    highlightsCount: k.highlightsCount || 0,
+    litanyAnnotationsCount: k.litanyAnnotationsCount || 0
+  }));
+
+  // Combine items safely: Currently Reading + Kittlibr Sidecars + Log entries
   const combinedReadingList = [...currentlyReading].filter(b => !removedBookIds.includes(b.id));
+
+  // Merge Kittlibr recent opens
+  kittlibrReadingEntries.forEach(kItem => {
+    if (!removedBookIds.includes(kItem.id) && !combinedReadingList.some(b => b.title.toLowerCase() === kItem.title.toLowerCase() || b.id === kItem.id)) {
+      combinedReadingList.push(kItem);
+    }
+  });
+
+  // Merge Log entries
   logReadingEntries.forEach(logItem => {
     if (!removedBookIds.includes(logItem.id) && !combinedReadingList.some(b => b.title.toLowerCase() === logItem.title.toLowerCase() || b.id === logItem.id)) {
       combinedReadingList.push(logItem);
     }
   });
+
+  const handleSendLitanyCapture = (e) => {
+    e.preventDefault();
+    if (!litanyModalBook || (!litanyText.trim() && !litanyQuote.trim())) return;
+
+    KittlibrBridgeService.sendLitanyToKittlibr({
+      bookTitle: litanyModalBook.title,
+      bookId: litanyModalBook.id,
+      chapter: litanyModalBook.progress,
+      quote: litanyQuote.trim(),
+      litanyText: litanyText.trim(),
+      intensity: 3,
+      tags: ['#reading_litany', '#sidecar_annotation']
+    });
+
+    onSaveBookReviewZettel({
+      title: `⚡ Litany Capture: ${litanyModalBook.title}`,
+      type: 'microlog',
+      content: `> "${litanyQuote.trim()}"\n\n**Litany Pulse Thought**: ${litanyText.trim()}\n\n*Synced to Kittlibr Book Sidecar: ${litanyModalBook.title} (${litanyModalBook.progress})*`,
+      tags: ['#litany', '#kittlibr_capture', '#reading', '#telemetry'],
+      metadata: { bookTitle: litanyModalBook.title, progress: litanyModalBook.progress, quote: litanyQuote.trim() }
+    });
+
+    setLitanyModalBook(null);
+    setLitanyText('');
+    setLitanyQuote('');
+    confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } });
+    alert(`⚡ Litany Capture sent to Kittlibr for "${litanyModalBook.title}"!`);
+  };
 
   const handleToggleSelectBook = (id) => {
     if (selectedBookIds.includes(id)) {
@@ -349,15 +417,43 @@ export default function EbookTracker({
                   </div>
                 </div>
 
-                {isActive && (
-                  <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(167, 139, 250, 0.3)', color: '#c4b5fd', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                    <Flame size={12} color="#f59e0b" /> ACTIVE SPRINT
-                  </span>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  {isActive && (
+                    <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(167, 139, 250, 0.3)', color: '#c4b5fd', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <Flame size={12} color="#f59e0b" /> ACTIVE SPRINT
+                    </span>
+                  )}
+                  {book.isKittlibr && (
+                    <span
+                      style={{
+                        fontSize: '0.62rem',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        background: 'rgba(56, 189, 248, 0.2)',
+                        color: '#38bdf8',
+                        fontWeight: 700,
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                      title={`Synced via Kittlibr Sidecar (${book.format}) - ${book.litanyAnnotationsCount} Litany annotations`}
+                    >
+                      <Sparkles size={10} /> KITTLIBR SIDECAR
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div style={{ fontSize: '0.72rem', color: '#c4b5fd', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Clock size={12} /> Progress: <strong>{book.progress}</strong>
+              <div style={{ fontSize: '0.72rem', color: '#c4b5fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.3rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <Clock size={12} /> Progress: <strong>{book.progress}</strong>
+                </span>
+                {book.isKittlibr && book.progressPercent !== undefined && (
+                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>
+                    {book.progressPercent}%
+                  </span>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -403,6 +499,26 @@ export default function EbookTracker({
                   🚫 DNF
                 </button>
 
+                {/* ⚡ Send Litany to Kittlibr button */}
+                <button
+                  onClick={() => {
+                    setLitanyModalBook(book);
+                    setLitanyQuote('');
+                    setLitanyText('');
+                  }}
+                  className="btn-secondary"
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.7rem',
+                    color: '#fcd34d',
+                    borderColor: 'rgba(245, 158, 11, 0.4)',
+                    background: 'rgba(245, 158, 11, 0.1)'
+                  }}
+                  title="Send Litany Pulse & Quote Annotation to Kittlibr for this book"
+                >
+                  <Zap size={11} style={{ marginRight: '2px', display: 'inline' }} /> Litany
+                </button>
+
                 <button
                   onClick={() => handleRemoveSingle(book)}
                   className="btn-secondary"
@@ -416,6 +532,128 @@ export default function EbookTracker({
           );
         })}
       </div>
+
+      {/* ⚡ Litany Capture to Kittlibr Modal */}
+      {litanyModalBook && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(6px)',
+            padding: '1rem'
+          }}
+          onClick={() => setLitanyModalBook(null)}
+        >
+          <div
+            className="glass-card"
+            style={{
+              width: '100%',
+              maxWidth: '520px',
+              padding: '1.25rem',
+              background: '#0f172a',
+              border: '2px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '16px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Zap size={18} color="#fcd34d" />
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                  ⚡ Send Litany to Kittlibr
+                </h3>
+              </div>
+              <button
+                onClick={() => setLitanyModalBook(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.8rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+              Book: <strong style={{ color: '#fff' }}>{litanyModalBook.title}</strong>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Progress: {litanyModalBook.progress}</div>
+            </div>
+
+            <form onSubmit={handleSendLitanyCapture} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', color: '#93c5fd', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>
+                  Reading Highlight / Book Quote (Optional):
+                </label>
+                <textarea
+                  placeholder="Paste quote from chapter..."
+                  value={litanyQuote}
+                  onChange={(e) => setLitanyQuote(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    minHeight: '55px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: '#fcd34d', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>
+                  ⚡ Litany Pulse Thought / Reaction:
+                </label>
+                <textarea
+                  placeholder="What is your immediate reaction or association?..."
+                  value={litanyText}
+                  onChange={(e) => setLitanyText(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    minHeight: '75px'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setLitanyModalBook(null)}
+                  className="btn-secondary"
+                  style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    fontSize: '0.75rem',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <Zap size={13} /> Emit to Kittlibr
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {reviewingBook && (

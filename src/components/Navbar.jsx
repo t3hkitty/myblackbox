@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Clock, Download, Settings, RefreshCw, Layers, Archive, Share2, Cloud, CheckCircle2, UserCheck, Key, Bell, BellOff, HelpCircle, Sparkles, BookOpen, Puzzle, Zap } from 'lucide-react';
+import { Shield, Clock, Download, Settings, RefreshCw, Layers, Archive, Share2, Cloud, CheckCircle2, UserCheck, Key, Bell, BellOff, HelpCircle, Sparkles, BookOpen, Puzzle, Zap, Eye, EyeOff } from 'lucide-react';
 import { getZettelTimestamp, formatReadablePT } from '../utils/timeUtils';
 import { exportAllDataJSON } from '../services/blackboxStorage';
 import { downloadAllMarkdownZIP } from '../services/zettelEngine';
@@ -35,6 +35,32 @@ export default function Navbar({
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
   const [notifsEnabled, setNotifsEnabled] = useState(getNotificationEnabledState());
   const [hasGeminiKey, setHasGeminiKey] = useState(Boolean(getStoredGeminiKey()));
+  const [isQuickBarVisible, setIsQuickBarVisible] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('mbb_quickbar_open');
+      return stored !== null ? stored === 'true' : true;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    const handleQuickbarEvent = (e) => {
+      if (e?.detail && typeof e.detail.open === 'boolean') {
+        setIsQuickBarVisible(e.detail.open);
+      } else {
+        setIsQuickBarVisible((prev) => !prev);
+      }
+    };
+    window.addEventListener('mbb-toggle-quickbar', handleQuickbarEvent);
+    return () => window.removeEventListener('mbb-toggle-quickbar', handleQuickbarEvent);
+  }, []);
+
+  const handleToggleQuickBar = () => {
+    const next = !isQuickBarVisible;
+    setIsQuickBarVisible(next);
+    localStorage.setItem('mbb_quickbar_open', String(next));
+    window.dispatchEvent(new CustomEvent('mbb-toggle-quickbar', { detail: { open: next } }));
+  };
 
   useEffect(() => {
     setGSession(getGoogleAuthSession());
@@ -489,6 +515,21 @@ export default function Navbar({
           >
             <HelpCircle size={14} />
             <span style={{ fontSize: '0.8rem' }}>FAQ</span>
+          </button>
+
+          {/* Toggle MBB Flight Deck QuickBar (Eyeball button by settings) */}
+          <button
+            onClick={handleToggleQuickBar}
+            className="btn-secondary"
+            style={{
+              padding: '0.4rem',
+              color: isQuickBarVisible ? '#c084fc' : 'var(--text-muted)',
+              borderColor: isQuickBarVisible ? 'rgba(168, 85, 247, 0.4)' : 'var(--border-color)',
+              background: isQuickBarVisible ? 'rgba(168, 85, 247, 0.12)' : 'transparent'
+            }}
+            title={isQuickBarVisible ? "Hide / Collapse MBB Flight Deck QuickBar" : "Show / Bring back MBB Flight Deck QuickBar"}
+          >
+            {isQuickBarVisible ? <Eye size={16} /> : <EyeOff size={16} />}
           </button>
 
           {/* System Settings Modal */}
