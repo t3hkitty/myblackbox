@@ -5,10 +5,10 @@
  * (status, type, roman, count, rrule, defer_until, stages_reached).
  */
 
-import { GoogleTasksV1Item } from '../../src/tasks/types';
+import { GoogleTasksV1Item } from './tasks/types';
 import { MBBTask } from './types';
 import { parseMBBNotesField, serializeMBBNotesField } from './mbbFrontmatter';
-import { getCombinedDueDateTime } from '../../src/tasks/temporal';
+import { getCombinedDueDateTime } from './tasks/temporal';
 
 export class MBBGoogleTasksSyncAdapter {
   /**

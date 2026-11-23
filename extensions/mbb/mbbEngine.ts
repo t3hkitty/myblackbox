@@ -9,7 +9,7 @@ import { serializeMBBNotesField } from './mbbFrontmatter';
 import { parseEmojiFolderPath } from './emojiFolders';
 import { toRomanNumeral, formatDurationHuman } from './roman';
 import { loadStageProfiles, evaluateStageProgress, renderDoneMessage } from './stageDirector';
-import { calculateNextRecurrence } from '../../src/tasks/recurrence';
+import { calculateNextRecurrence } from './tasks/recurrence';
 
 const STORE_KEY = 'mbb_engine_tasks_v2';
 type MBBStoreListener = (tasks: MBBTask[]) => void;
