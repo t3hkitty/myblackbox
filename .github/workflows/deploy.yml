@@ -19,9 +19,6 @@ jobs:
   deploy-web-pages:
     name: Deploy Web (GitHub Pages)
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout myblackbox
         uses: actions/checkout@v4
@@ -39,6 +36,8 @@ jobs:
 
       - name: Install shared-kawaii-ui dependencies
         run: |
+          mkdir -p ../shared-kawaii-ui
+          cp -r shared-kawaii-ui/* ../shared-kawaii-ui/
           cd ../shared-kawaii-ui
           npm install
 
@@ -52,6 +51,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          publish_branch: gh-pages
 
   build-windows-exe:
     name: Build Standalone Windows EXE
@@ -93,9 +93,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Check Capacitor / Native Android Workspace
         run: |
-          echo "Native Android APK compilation ready for Capacitor container"
+          echo "Native Android APK workspace ready"
