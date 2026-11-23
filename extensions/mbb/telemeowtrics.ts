@@ -1,21 +1,26 @@
 /**
  * 🐾 Telemeowtrics Input Adapters
  * Modular capture adapters for Tasker/MacroDroid `Send Intent`, `kittlibr://capture`,
- * `mbb://ticker/<slug>`, `mbb://state/<state_name>`, and notification/clipboard hooks.
- * Appends or updates Zettelkasten-ID (`YYYYMMDD-HHMM` Pacific Time) `.md` notes
- * in `meow-vault/inbox` or `meow-vault/tasks`, queuing cleanly offline.
+ * `mbb://ticker/<slug>`, `mbb://state/<state_name>`, and somatic telemetry:
+ * - Fitness & activity summaries (Google Fit / Health Connect equivalent)
+ * - Timeline / location / geofence logs
+ * - Contact & relationship context
+ * 
+ * Appends flat .md notes with YAML frontmatter and Zettelkasten-ID (`YYYYMMDD-HHMM` Pacific Time)
+ * into `meow-vault/inbox` or `meow-vault/telemetry`, queuing cleanly offline.
  */
 
 import { AnyMDVaultStorageAPI, IntentEvent } from './host/AnyMDExtensionHostTypes';
 import { mbbEngineStore } from './mbbEngine';
 
 export interface TelemeowtricsPayload {
-  source?: string; // 'tasker' | 'macrodroid' | 'clipboard' | 'broadcast' | 'deeplink'
+  source?: string; // 'tasker' | 'macrodroid' | 'clipboard' | 'broadcast' | 'deeplink' | 'somatic'
   title?: string;
   body?: string;
   tags?: string[];
   slug?: string;
   state?: string;
+  category?: 'fitness' | 'timeline' | 'contacts' | string;
   meta?: Record<string, unknown>;
 }
 
@@ -76,7 +81,14 @@ export class TelemeowtricsAdapter {
       return;
     }
 
-    // 3. Kittlibr capture: kittlibr://capture
+    // 3. Somatic Telemetry URI / Action: mbb://somatic/<category> or action === 'somatic'
+    if (action === 'somatic' || (protocol === 'mbb' && slug && (slug === 'fitness' || slug === 'timeline' || slug === 'contacts'))) {
+      const category = (slug || payload.category || 'fitness') as string;
+      await this.handleSomaticTelemetry(category, payload);
+      return;
+    }
+
+    // 4. Kittlibr capture: kittlibr://capture
     if (protocol === 'kittlibr' || action === 'capture') {
       await this.captureToVaultNote({
         source: 'kittlibr',
@@ -88,7 +100,7 @@ export class TelemeowtricsAdapter {
       return;
     }
 
-    // 4. Unified firehose / Tasker broadcast: org.anymd.broadcast.UNIFIED_FIREHOSE
+    // 5. Unified firehose / Tasker broadcast: org.anymd.broadcast.UNIFIED_FIREHOSE
     if (action === 'org.anymd.broadcast.UNIFIED_FIREHOSE' || action === 'org.anymd.broadcast.TASKER_WEBHOOK') {
       const text = (payload.text as string) || (payload.message as string) || JSON.stringify(payload);
       await this.captureToVaultNote({
@@ -109,6 +121,63 @@ export class TelemeowtricsAdapter {
       tags: ['telemeowtrics'],
       meta: payload
     });
+  }
+
+  /**
+   * Handles somatic telemetry (fitness, timeline, contacts) into meow-vault/telemetry
+   */
+  public async handleSomaticTelemetry(category: string, payload: Record<string, unknown>): Promise<void> {
+    const zettelId = this.generateZettelId();
+    const notePath = `meow-vault/telemetry/${zettelId}-somatic-${category.toLowerCase()}.md`;
+    const title = `🐾 Somatic Telemetry: ${category.charAt(0).toUpperCase() + category.slice(1)} (${zettelId})`;
+
+    const lines = [
+      `# ${title}`,
+      '',
+      `- **Captured At (PT)**: \`${zettelId}\``,
+      `- **Category**: \`${category}\``,
+      `- **Source**: \`${(payload.source as string) || 'telemeowtrics-intent'}\``,
+      ''
+    ];
+
+    if (category.toLowerCase() === 'fitness') {
+      lines.push(`### 🏃 Fitness Metrics`);
+      if (payload.steps !== undefined) lines.push(`- **Steps**: ${payload.steps}`);
+      if (payload.active_minutes !== undefined) lines.push(`- **Active Minutes**: ${payload.active_minutes}`);
+      if (payload.calories !== undefined) lines.push(`- **Calories**: ${payload.calories} kcal`);
+      lines.push('');
+    } else if (category.toLowerCase() === 'timeline') {
+      lines.push(`### 📍 Timeline / Geofence`);
+      if (payload.geofence) lines.push(`- **Geofence Zone**: \`${payload.geofence}\``);
+      if (payload.coords) lines.push(`- **Coordinates**: \`${payload.coords}\``);
+      lines.push('');
+    } else if (category.toLowerCase() === 'contacts') {
+      lines.push(`### 👥 Contact Telemetry`);
+      if (payload.name) lines.push(`- **Contact**: \`${payload.name}\``);
+      if (payload.interaction) lines.push(`- **Interaction**: \`${payload.interaction}\``);
+      lines.push('');
+    }
+
+    lines.push('### 🧬 Raw Telemetry Data');
+    lines.push('```json');
+    lines.push(JSON.stringify(payload, null, 2));
+    lines.push('```');
+
+    await this.storage.writeFile(
+      notePath,
+      lines.join('\n'),
+      {
+        title,
+        created_pt: zettelId,
+        type: `telemeowtrics-${category.toLowerCase()}`,
+        category: category.toLowerCase(),
+        tags: ['somatic', 'telemeowtrics', category.toLowerCase()],
+        source: (payload.source as string) || 'telemeowtrics',
+        vault_area: 'telemetry',
+        payload
+      }
+    );
+    console.log(`[Telemeowtrics] Somatic note written: ${notePath}`);
   }
 
   /**

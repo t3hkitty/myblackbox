@@ -4,7 +4,21 @@ import { DEFAULT_MOOD_SETS, getTaskListConfig, saveTaskListConfig, getAutoTagCon
 import { getStoredGeminiKey, saveGeminiKey, testGeminiKeyConnectivity } from '../services/geminiService';
 import { getIftttConfig, saveIftttConfig, testIftttWebhook } from '../services/iftttService';
 import { getCustomWebhookConfig, saveCustomWebhookConfig, testCustomWebhookPing } from '../services/customWebhookService';
-import { getGoogleCredentials, saveGoogleCredentials, reauthenticateGoogleAccount, directConnectGoogleEmail, getGoogleAuthSession, fetchUserGoogleTaskLists, syncAllZettelsToGoogleDrive, openOAuthPlaygroundHelper, extractOAuthTokenFromUrl } from '../services/googleDriveAuthEngine';
+import {
+  getGoogleCredentials,
+  saveGoogleCredentials,
+  reauthenticateGoogleAccount,
+  directConnectGoogleEmail,
+  getGoogleAuthSession,
+  fetchUserGoogleTaskLists,
+  syncAllZettelsToGoogleDrive,
+  openOAuthPlaygroundHelper,
+  extractOAuthTokenFromUrl,
+  SCOPE_PRESETS,
+  getActiveScopePresets,
+  saveActiveScopePresets,
+  PROJECT_ID
+} from '../services/googleDriveAuthEngine';
 
 import { getSpotifyCredentials, saveSpotifyCredentials, getSpotifyAccessToken, saveSpotifyAccessToken, triggerSpotifyAuthPopup } from '../services/spotifyService';
 import { anyMDExtensionHost } from '../../extensions/mbb/host/AnyMDExtensionHost';
@@ -34,6 +48,7 @@ export default function SettingsModal({
   const [authSession, setAuthSession] = useState(null);
   const [detectedLists, setDetectedLists] = useState([]);
   const [isFetchingLists, setIsFetchingLists] = useState(false);
+  const [selectedScopePresets, setSelectedScopePresets] = useState(['vault', 'contacts']);
 
   // IFTTT state
   const [iftttKey, setIftttKey] = useState('');
@@ -103,6 +118,7 @@ export default function SettingsModal({
 
     const session = getGoogleAuthSession();
     setAuthSession(session);
+    setSelectedScopePresets(getActiveScopePresets());
 
     const cWebhook = getCustomWebhookConfig();
     setCustomWebhookConfig(cWebhook);
@@ -156,7 +172,8 @@ export default function SettingsModal({
       clientId: googleClientId.trim(),
       apiKey: googleApiKey.trim()
     });
-    alert('Google Cloud OAuth Client ID & API Key saved!');
+    saveActiveScopePresets(selectedScopePresets);
+    alert('Google Cloud OAuth Client ID, API Key & Scope Presets saved!');
   };
 
   const handleSaveSpotifyCreds = (e) => {
@@ -1124,14 +1141,69 @@ export default function SettingsModal({
                   />
                 </div>
 
+                {/* Modular Opt-In Scope Presets */}
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#93c5fd', marginBottom: '0.2rem' }}>
+                    📦 Modular OAuth Scope Presets (Desktop App: {PROJECT_ID})
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+                    Opt-in to optional modules. Sensitive scopes (Fitness, Timeline, Contacts) work out of the box in personal/test mode by clicking "Advanced → Go to AnyMD (unsafe)" without requiring Google enterprise app verification.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+                    {Object.values(SCOPE_PRESETS).map((preset) => {
+                      const isChecked = selectedScopePresets.includes(preset.id);
+                      return (
+                        <div
+                          key={preset.id}
+                          onClick={() => {
+                            const updated = isChecked
+                              ? selectedScopePresets.filter((id) => id !== preset.id)
+                              : [...selectedScopePresets, preset.id];
+                            setSelectedScopePresets(updated);
+                            saveActiveScopePresets(updated);
+                          }}
+                          style={{
+                            padding: '0.5rem 0.6rem',
+                            borderRadius: '6px',
+                            background: isChecked ? 'rgba(59, 130, 246, 0.12)' : 'rgba(0,0,0,0.25)',
+                            border: isChecked ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: '700', color: isChecked ? '#93c5fd' : '#cbd5e1' }}>
+                              {preset.name}
+                            </span>
+                            <span style={{
+                              fontSize: '0.65rem',
+                              fontWeight: '700',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: preset.tier === 'base' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                              color: preset.tier === 'base' ? '#34d399' : '#fcd34d'
+                            }}>
+                              {preset.tier.toUpperCase()}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.68rem', color: 'var(--text-dim)', margin: 0, lineHeight: '1.3' }}>
+                            {preset.description}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', padding: '0.6rem', fontSize: '0.75rem', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
                   <div>
-                    ℹ️ <strong>Current Mode</strong>: Active Web OAuth & Flat-File Backup enabled.
+                    ℹ️ <strong>OAuth Transport</strong>: Loopback <code>http://127.0.0.1</code> | Scopes: {selectedScopePresets.join(', ')}
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      reauthenticateGoogleAccount();
+                      reauthenticateGoogleAccount(selectedScopePresets);
                       alert('Triggered Google Account Re-Authentication Popup!');
                     }}
                     className="btn-secondary"
@@ -1143,16 +1215,16 @@ export default function SettingsModal({
 
                 <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px', padding: '0.75rem', marginTop: '0.5rem' }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#93c5fd', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>🧪</span> Connect via Google OAuth Playground (Fast & Pre-Configured)
+                    <span>🧪</span> Connect via Google OAuth Playground or C:\Scripts Loopback
                   </div>
                   <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: '1.45', marginBottom: '0.5rem' }}>
-                    Open OAuth Playground with pre-selected scopes for <em>Google Tasks</em>, <em>Google Drive AppData</em>, and <em>Contacts</em>. Complete the Google login and paste the generated access token below:
+                    Open OAuth Playground with pre-selected scopes for active presets (<strong>{selectedScopePresets.join(', ')}</strong>), or paste the JSON token bundle / access token below:
                   </p>
                   
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
                     <button
                       type="button"
-                      onClick={openOAuthPlaygroundHelper}
+                      onClick={() => openOAuthPlaygroundHelper(selectedScopePresets)}
                       className="btn-primary"
                       style={{ flex: 1, padding: '0.45rem', fontSize: '0.75rem', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' }}
                     >
@@ -1163,12 +1235,12 @@ export default function SettingsModal({
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <input
                       type="text"
-                      placeholder="Paste Token (ya29...) or Playground redirect string"
+                      placeholder="Paste Token (ya29...) or ~/.config/anymd/google_oauth_token.json content"
                       onChange={(e) => {
                         const parsed = extractOAuthTokenFromUrl(e.target.value);
                         if (parsed) {
                           setAuthSession(getGoogleAuthSession());
-                          alert('🟢 Successfully authenticated Google Account from OAuth Playground token!');
+                          alert('🟢 Successfully authenticated Google Account from OAuth token / bundle!');
                           e.target.value = '';
                         }
                       }}
@@ -1179,16 +1251,16 @@ export default function SettingsModal({
 
                 <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid var(--border-color)' }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fcd34d', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    🚀 GitHub Open Source Self-Configuration Guide
+                    🚀 Google Cloud Desktop App & Loopback Transport Setup
                   </div>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '0.6rem' }}>
-                    Want to publish or share your own fork of myBlackbox on GitHub? Follow these 4 steps so anyone cloning your repository can link their personal Google Account:
+                    For personal / headless vault synchronization across AnyMD, MBB, Kittlibr, and rclone:
                   </p>
                   <ol style={{ fontSize: '0.73rem', color: 'var(--text-muted)', paddingLeft: '1.2rem', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                    <li>Go to <strong style={{ color: '#fff' }}>Google Cloud Console</strong> (<a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>console.cloud.google.com</a>) and create a new project.</li>
-                    <li>In <strong>API & Services ➔ Library</strong>, enable <em>Google Drive API</em>, <em>Google Tasks API</em>, and <em>Google People API (Contacts)</em>.</li>
-                    <li>In <strong>Credentials ➔ Edit OAuth Client ID</strong>, add <code style={{ color: '#fcd34d' }}>https://localhost:5173</code> to <strong>Authorized JavaScript origins</strong> and <strong>Authorized redirect URIs</strong>.</li>
-                    <li>Paste your Client ID above or in <code style={{ color: '#fcd34d' }}>.env.local</code>: <br/><code style={{ color: '#34d399', background: 'rgba(0,0,0,0.4)', padding: '2px 6px', borderRadius: '4px' }}>VITE_GOOGLE_CLIENT_ID="your_client_id_here.apps.googleusercontent.com"</code></li>
+                    <li>Google Cloud Project: <strong style={{ color: '#fff' }}>anymd-515619</strong> configured with OAuth client type <strong>Desktop app</strong>.</li>
+                    <li>Always use plain HTTP loopback: <code style={{ color: '#38bdf8' }}>http://127.0.0.1:&lt;port&gt;</code> (never <code>https://localhost</code>).</li>
+                    <li>CLI Capture & Offline Refresh: run <code style={{ color: '#fcd34d' }}>python C:\Scripts\google_oauth_loopback.py</code> to capture offline refresh tokens and write <code style={{ color: '#34d399' }}>~/.config/anymd/google_oauth_token.json</code> and rclone config snippet.</li>
+                    <li>AnyMD Daemon on port <code style={{ color: '#38bdf8' }}>:3050</code> shares this token bundle with headless rclone and vault sync scripts without cp1252 crashes.</li>
                   </ol>
                 </div>
               </div>
