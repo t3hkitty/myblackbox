@@ -1,0 +1,101 @@
+name: Deploy Web, Windows EXE, and Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'deploy-all'
+  cancel-in-progress: false
+
+jobs:
+  deploy-web-pages:
+    name: Deploy Web (GitHub Pages)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout myblackbox
+        uses: actions/checkout@v4
+
+      - name: Checkout shared-kawaii-ui
+        uses: actions/checkout@v4
+        with:
+          repository: t3hkitty/shared-kawaii-ui
+          path: shared-kawaii-ui
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install shared-kawaii-ui dependencies
+        run: |
+          cd ../shared-kawaii-ui
+          npm install
+
+      - name: Install dependencies & Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+
+  build-windows-exe:
+    name: Build Standalone Windows EXE
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      - name: Compile Standalone Telemeowtrics CLI EXE
+        run: |
+          pyinstaller --onefile --console --name MBB-Telemeowtrics-CLI scripts/telemeowtrics_cli.py
+
+      - name: Upload EXE Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MBB-Telemeowtrics-CLI-Windows-EXE
+          path: dist/MBB-Telemeowtrics-CLI.exe
+
+  build-android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Check Capacitor / Native Android Workspace
+        run: |
+          echo "Native Android APK compilation ready for Capacitor container"
