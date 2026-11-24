@@ -15,13 +15,21 @@ import {
   AlertTriangle,
   CheckCircle2,
   ListFilter,
-  RefreshCw
+  RefreshCw,
+  FastForward,
+  Wand2,
+  Volume2,
+  VolumeX,
+  Play
 } from 'lucide-react';
 import { MBBTask, TaskPriority } from '../../tasks/types';
 import { mbbTaskStore } from '../../tasks/store';
 import { PRIORITY_MAP } from '../../tasks/priority';
 import { AsciiPetWidget } from '../animations/AsciiPetWidget';
 import { syncTaskToGoogleTasks } from '../../services/googleDriveAuthEngine';
+import { dopamineAudio } from '../../services/dopamineAudioEngine';
+import { GoblinDecomposerModal } from './GoblinDecomposerModal';
+import { BeatTheClockSprintWidget } from './BeatTheClockSprintWidget';
 import confetti from 'canvas-confetti';
 
 interface TasksDashboardViewProps {
@@ -37,6 +45,12 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedPriority, setSelectedPriority] = useState<number | 'all'>('all');
   const [petEvent, setPetEvent] = useState<'idle' | 'task_complete' | 'streak_sync' | 'hydrate_nudge'>('idle');
+
+  // AuDHD Support State: Goblin modal & 5-minute Beat-the-Clock Sprint drawer
+  const [decomposingTask, setDecomposingTask] = useState<MBBTask | null>(null);
+  const [activeSprintTask, setActiveSprintTask] = useState<string | null>(null);
+  const [showSprintWidget, setShowSprintWidget] = useState<boolean>(false);
+  const [soundMuted, setSoundMuted] = useState<boolean>(dopamineAudio.getIsMuted());
 
   // Collapsible section state
   const [collapsedSections, setCollapsedSections] = useState<{ [key: string]: boolean }>({
@@ -55,6 +69,12 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
 
   const toggleSection = (sec: string) => {
     setCollapsedSections((prev) => ({ ...prev, [sec]: !prev[sec] }));
+  };
+
+  const toggleSound = () => {
+    const next = !soundMuted;
+    setSoundMuted(next);
+    dopamineAudio.setMuted(next);
   };
 
   // Quick Capture handler
@@ -77,28 +97,64 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
       }
     });
 
+    // Procedural tick blip & confetti
+    dopamineAudio.playTickBlip();
+    confetti({ particleCount: 20, spread: 50, origin: { y: 0.8 } });
+
     // Sync to Google Tasks
     syncTaskToGoogleTasks(cleanTitle || quickTitle, 'blackbox', `Created via MBB Tasks Dashboard`);
 
     setQuickTitle('');
     setQuickPriority(0);
     setQuickDueDate('');
-    confetti({ particleCount: 20, spread: 50, origin: { y: 0.8 } });
   };
 
+  // 1-Click Toggle Task with Procedural Victory Chime
   const handleToggleTask = (task: MBBTask) => {
     if (task.status === 'completed') {
       mbbTaskStore.updateTask(task.id, { status: 'needsAction', completed: undefined });
     } else {
       mbbTaskStore.completeTask(task.id);
       setPetEvent('task_complete');
-      confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
+      dopamineAudio.playVictoryChime();
+      confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
       if (onSaveZettel) {
         onSaveZettel({
           title: `Completed Task: ${task.title}`,
           type: 'task',
           content: `Completed MBB Task "${task.title}". Priority: ${task.metadata?.priority || 0}`,
           tags: ['#task_complete', ...(task.metadata?.tags?.map((t) => `#${t}`) || [])]
+        });
+      }
+    }
+  };
+
+  // Guilt-Free Half-Done action
+  const handleHalfTask = (task: MBBTask) => {
+    mbbTaskStore.setHalfCompleted(task.id);
+    dopamineAudio.playGentleRelief();
+    confetti({ particleCount: 15, spread: 35, origin: { y: 0.8 } });
+  };
+
+  // Guilt-Free Skip / Defer action
+  const handleSkipTask = (task: MBBTask) => {
+    mbbTaskStore.skipTask(task.id);
+    dopamineAudio.playGentleRelief();
+  };
+
+  // Double Checkmark / Sweep All Active Tasks
+  const handleSweepAll = () => {
+    const count = mbbTaskStore.sweepAllActive();
+    if (count > 0) {
+      dopamineAudio.playSweepAllChime();
+      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      setPetEvent('streak_sync');
+      if (onSaveZettel) {
+        onSaveZettel({
+          title: `🧹 Massive Task Sweep Catch-Up (${count} tasks)`,
+          type: 'task_sweep',
+          content: `Swept ${count} active/half tasks into completed archive without guilt.`,
+          tags: ['#tasks', '#sweep_all', '#non_zero', '#dopamine_victory']
         });
       }
     }
@@ -141,7 +197,7 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
 
   // Categorize tasks into priority / due state buckets
   const nowStr = new Date().toISOString().split('T')[0];
-  const activeTasks = filteredTasks.filter((t) => t.status === 'needsAction');
+  const activeTasks = filteredTasks.filter((t) => t.status === 'needsAction' || t.status === 'half');
   const completedTasks = filteredTasks.filter((t) => t.status === 'completed');
 
   const overdueTasks = activeTasks.filter((t) => t.due && t.due < nowStr);
@@ -151,6 +207,7 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
 
   const renderTaskRow = (task: MBBTask) => {
     const isCompleted = task.status === 'completed';
+    const isHalf = task.status === 'half';
     const prio = task.metadata?.priority || 0;
     const prioInfo = PRIORITY_MAP[prio as TaskPriority] || PRIORITY_MAP[0];
 
@@ -162,12 +219,13 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
           alignItems: 'center',
           gap: '0.6rem',
           padding: '0.45rem 0.6rem',
-          background: isCompleted ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
+          background: isCompleted ? 'rgba(0, 0, 0, 0.2)' : isHalf ? 'rgba(254, 240, 138, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+          border: isHalf ? '1px solid rgba(250, 204, 21, 0.4)' : '1px solid rgba(255, 255, 255, 0.06)',
           borderRadius: '6px',
           transition: 'all 0.15s ease'
         }}
       >
+        {/* Completion Checkbox */}
         <button
           onClick={() => handleToggleTask(task)}
           style={{
@@ -183,6 +241,14 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
           {isCompleted ? <CheckCircle2 size={16} /> : <Square size={16} />}
         </button>
 
+        {/* Half-Done Badge Indicator */}
+        {isHalf && (
+          <span title="Guilt-Free Half-Done" style={{ fontSize: '0.85rem' }}>
+            🌗
+          </span>
+        )}
+
+        {/* Task Title & Tags */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
@@ -198,7 +264,7 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
             {task.title}
           </div>
 
-          {(task.due || (task.metadata?.tags && task.metadata.tags.length > 0)) && (
+          {(task.due || task.defer_until || (task.metadata?.tags && task.metadata.tags.length > 0)) && (
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
               {task.due && (
                 <span
@@ -211,6 +277,11 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
                   }}
                 >
                   <Calendar size={10} /> {task.due}
+                </span>
+              )}
+              {task.defer_until && (
+                <span style={{ fontSize: '0.65rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  ⏳ Deferred: {task.defer_until}
                 </span>
               )}
               {task.metadata?.tags?.map((tag) => (
@@ -236,6 +307,69 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
           )}
         </div>
 
+        {/* AuDHD Action Buttons: Goblin Decompose, Half-Done, Skip */}
+        {!isCompleted && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {/* 🧙‍♂️ Goblin Break Down Button */}
+            <button
+              onClick={() => setDecomposingTask(task)}
+              title="Decompose overwhelming task into tiny < 5m steps"
+              style={{
+                background: 'rgba(168, 85, 247, 0.15)',
+                border: '1px solid rgba(168, 85, 247, 0.4)',
+                borderRadius: '4px',
+                color: '#c084fc',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                padding: '2px 5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+            >
+              <Wand2 size={11} /> Break Down
+            </button>
+
+            {/* 🌗 Guilt-Free Half */}
+            <button
+              onClick={() => handleHalfTask(task)}
+              title="Mark half done (guilt-free progress)"
+              style={{
+                background: 'rgba(250, 204, 21, 0.15)',
+                border: '1px solid rgba(250, 204, 21, 0.4)',
+                borderRadius: '4px',
+                color: '#facc15',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                padding: '2px 5px',
+                cursor: 'pointer'
+              }}
+            >
+              🌗 Half
+            </button>
+
+            {/* ⏭️ Skip without guilt */}
+            <button
+              onClick={() => handleSkipTask(task)}
+              title="Skip or defer 7 days without guilt"
+              style={{
+                background: 'rgba(148, 163, 184, 0.15)',
+                border: '1px solid rgba(148, 163, 184, 0.3)',
+                borderRadius: '4px',
+                color: '#94a3b8',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                padding: '2px 5px',
+                cursor: 'pointer'
+              }}
+            >
+              ⏭️ Skip
+            </button>
+          </div>
+        )}
+
+        {/* Priority Badge */}
         {prio > 0 && (
           <span
             style={{
@@ -309,7 +443,7 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* 1. Top Bar: Slim Quick Capture + Concise Filter + ASCII Pet Companion */}
+      {/* 1. Top Bar: Slim Quick Capture + Concise Filter + AuDHD Actions */}
       <div
         className="glass-panel"
         style={{
@@ -323,16 +457,99 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <CheckSquare size={18} color="#60a5fa" />
             <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-              Tasks &amp; Google Tasks Sync Workspace
+              🐾 AuDHD Task Command Center
             </h2>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                color: '#c084fc',
+                border: '1px solid rgba(168, 85, 247, 0.4)',
+                padding: '1px 6px',
+                borderRadius: '6px'
+              }}
+            >
+              Anti-Overwhelm
+            </span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Frontmatter AST &bull; gtasks two-way sync &bull; Tasker capture
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Mute/Unmute Audio Chime */}
+            <button
+              onClick={toggleSound}
+              className="btn-secondary"
+              style={{ padding: '0.3rem 0.55rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+              title={soundMuted ? 'Unmute procedural dopamine chords' : 'Mute procedural audio'}
+            >
+              {soundMuted ? <VolumeX size={13} color="#f87171" /> : <Volume2 size={13} color="#34d399" />}
+              <span>{soundMuted ? 'Muted' : 'Sound ON'}</span>
+            </button>
+
+            {/* 5-Min Sprint Drawer Toggle */}
+            <button
+              onClick={() => setShowSprintWidget((prev) => !prev)}
+              className="btn-secondary"
+              style={{
+                padding: '0.3rem 0.6rem',
+                fontSize: '0.72rem',
+                borderColor: showSprintWidget ? '#f97316' : 'var(--border-color)',
+                color: showSprintWidget ? '#fb923c' : 'var(--text-muted)',
+                background: showSprintWidget ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+              title="Launch 5-Minute 'Beat The Clock' Dopamine Sprint"
+            >
+              <Flame size={13} color="#f97316" fill="#f97316" />
+              <span>5m Sprint</span>
+            </button>
+
+            {/* Sweep All / Double Checkmark */}
+            {activeTasks.length > 0 && (
+              <button
+                onClick={handleSweepAll}
+                className="btn-secondary"
+                style={{
+                  padding: '0.3rem 0.6rem',
+                  fontSize: '0.72rem',
+                  borderColor: 'rgba(16, 185, 129, 0.4)',
+                  color: '#34d399',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+                title="Sweep all piled-up tasks as completed without guilt!"
+              >
+                <CheckCircle2 size={13} />
+                <span>Sweep All ({activeTasks.length})</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Optional 5-Min Beat-the-Clock Sprint Panel */}
+        {showSprintWidget && (
+          <BeatTheClockSprintWidget
+            initialTask={activeSprintTask || undefined}
+            onSprintComplete={(title, dur) => {
+              if (onSaveZettel) {
+                onSaveZettel({
+                  title: `🔥 Beat The Clock Victory: ${title}`,
+                  type: 'sprint_victory',
+                  content: `Completed 5-minute Beat-the-Clock sprint for "${title}" in ${dur} seconds! +50 Dopamine Victory Points.`,
+                  tags: ['#beat_the_clock', '#dopamine_victory', '#sprint_5m']
+                });
+              }
+              setActiveSprintTask(null);
+            }}
+          />
+        )}
 
         {/* Slim Quick Capture Input */}
         <form onSubmit={handleCreateTask} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -490,6 +707,34 @@ export const TasksDashboardView: React.FC<TasksDashboardViewProps> = ({ onSaveZe
           </>
         )}
       </div>
+
+      {/* 4. Goblin Task Decomposer Modal */}
+      {decomposingTask && (
+        <GoblinDecomposerModal
+          taskTitle={decomposingTask.title}
+          isOpen={Boolean(decomposingTask)}
+          onClose={() => setDecomposingTask(null)}
+          onAddSubtasks={(subtasks) => {
+            subtasks.forEach((s) => {
+              mbbTaskStore.addTask({
+                title: s.title,
+                status: 'needsAction',
+                metadata: {
+                  priority: decomposingTask.metadata?.priority || 1,
+                  parent: decomposingTask.id,
+                  tags: [...(decomposingTask.metadata?.tags || []), 'micro_step']
+                }
+              });
+            });
+            setDecomposingTask(null);
+          }}
+          onStartSprint={(firstStep) => {
+            setActiveSprintTask(firstStep);
+            setShowSprintWidget(true);
+            setDecomposingTask(null);
+          }}
+        />
+      )}
     </div>
   );
 };

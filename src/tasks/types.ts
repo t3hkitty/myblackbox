@@ -32,7 +32,11 @@ export interface MBBTaskMetadata {
   tags?: string[];
   recurrence?: string; // RFC 5545 RRULE string e.g. FREQ=DAILY;INTERVAL=1
   recurrenceBase?: 'due_date' | 'completion_date';
-  estimatedMinutes?: number;
+  status?: 'needsAction' | 'completed' | 'half' | 'skipped';
+  type?: 'task' | 'ticker' | 'timer' | 'event';
+  count?: number;
+  roman?: string;
+  defer_until?: string;
   [key: string]: unknown; // Allow non-destructive extra custom frontmatter keys
 }
 
@@ -41,8 +45,10 @@ export interface MBBTask {
   title: string;
   notes?: string; // Plaintext body minus YAML frontmatter
   rawNotes?: string; // Original full Google Tasks notes string
-  status: 'needsAction' | 'completed';
+  status: 'needsAction' | 'completed' | 'half' | 'skipped';
+  type?: 'task' | 'ticker' | 'timer' | 'event';
   due?: string; // YYYY-MM-DD or ISO 8601 string
+  defer_until?: string; // YYYY-MM-DD or ISO 8601 string
   completed?: string; // ISO 8601 string
   updated?: string; // ISO 8601 string
   parent?: string;
